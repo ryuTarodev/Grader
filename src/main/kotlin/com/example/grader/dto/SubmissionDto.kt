@@ -1,6 +1,6 @@
 package com.example.grader.dto
 
-import com.ryutaro.grader.entity.Status
+import com.example.grader.entity.Status
 import java.io.Serializable
 import java.time.Instant
 

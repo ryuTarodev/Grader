@@ -1,7 +1,6 @@
 package com.example.grader.dto
 
-import com.ryutaro.grader.entity.Problem
-import com.ryutaro.grader.entity.Type
+import com.example.grader.entity.Type
 import java.io.Serializable
 
 /**

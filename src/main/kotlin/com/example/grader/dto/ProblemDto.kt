@@ -1,6 +1,6 @@
 package com.example.grader.dto
 
-import com.ryutaro.grader.entity.Difficulty
+import com.example.grader.entity.Difficulty
 
 import java.io.Serializable
 

@@ -1,7 +1,7 @@
 package com.example.grader.dto
 
-import com.ryutaro.grader.entity.Problem
-import com.ryutaro.grader.entity.Tag
+import com.example.grader.entity.Problem
+import com.example.grader.entity.Tag
 import java.io.Serializable
 
 /**

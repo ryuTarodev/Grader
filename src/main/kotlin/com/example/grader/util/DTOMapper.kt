@@ -1,7 +1,7 @@
 package com.example.grader.util
 
-import com.ryutaro.grader.dto.*
-import com.ryutaro.grader.entity.*
+import com.example.grader.dto.*
+import com.example.grader.entity.*
 
 
 fun AppUser.toAppUserDTO(): AppUserDto {

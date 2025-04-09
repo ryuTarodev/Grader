@@ -1,6 +1,6 @@
 package com.example.grader.util
 
-import com.ryutaro.grader.dto.ApiResponse
+import com.example.grader.dto.ApiResponse
 
 object ResponseUtil {
 

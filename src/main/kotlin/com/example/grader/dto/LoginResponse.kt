@@ -1,6 +1,6 @@
 package com.example.grader.dto
 
-import com.ryutaro.grader.entity.Role
+import com.example.grader.entity.Role
 import jakarta.validation.constraints.NotBlank
 data class LoginResponse(
 

@@ -1,6 +1,6 @@
 package com.example.grader.security
 
-import com.ryutaro.grader.error.JwtKeyException
+import com.example.grader.error.JwtKeyException
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
 import org.slf4j.LoggerFactory

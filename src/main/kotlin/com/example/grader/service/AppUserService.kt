@@ -1,9 +1,6 @@
 package com.example.grader.service
 
-import com.example.grader.dto.ApiResponse
-import com.example.grader.dto.AppUserDto
-import com.example.grader.dto.LoginRequest
-import com.example.grader.dto.LoginResponse
+import com.example.grader.dto.*
 import com.example.grader.entity.AppUser
 import com.example.grader.error.UserNotFoundException
 import com.example.grader.repository.AppUserRepository
@@ -74,24 +71,39 @@ class AppUserService(
         }
     }
 
-    fun resetPassword(loginRequest: LoginRequest, newPassword: String): ApiResponse<AppUserDto> {
+    fun resetPassword(resetPasswordRequest: ResetPasswordRequest): ApiResponse<AppUserDto> {
         return try {
-            val appUser =appUserRepository.findAppUserByAppUsername(loginRequest.username)
-            ?: throw UserNotFoundException("Username: ${loginRequest.username} does not exist!")
-            appUser.clientPassword = passwordEncoder.encode(newPassword)
+            val appUser = appUserRepository.findAppUserByAppUsername(resetPasswordRequest.username)
+                ?: throw UserNotFoundException("Username: ${resetPasswordRequest.username} does not exist!")
+
+            if (!passwordEncoder.matches(resetPasswordRequest.oldPassword, appUser.clientPassword)) {
+                return ResponseUtil.unauthorized(
+                    message = "Old password is incorrect.",
+                    data = AppUserDto()
+                )
+            }
+
+            if (passwordEncoder.matches(resetPasswordRequest.newPassword, appUser.clientPassword)) {
+                return ResponseUtil.badRequest(
+                    message = "New password must be different from the old password.",
+                    data = AppUserDto()
+                )
+            }
+
+            appUser.clientPassword = passwordEncoder.encode(resetPasswordRequest.newPassword)
 
             val savedAppUser = appUserRepository.save(appUser)
             val appUserDTO = savedAppUser.toAppUserDTO()
 
             ResponseUtil.created(
-                message = "User change password successfully",
+                message = "User changed password successfully",
                 data = appUserDTO,
                 metadata = null
             )
         } catch (e: UserNotFoundException) {
             logger.error("UserNotFound: ${e.message}")
             ResponseUtil.notFound(
-                message = "Invalid sign-up: ${e.message}",
+                message = "Invalid request: ${e.message}",
                 data = AppUserDto()
             )
         } catch (e: Exception) {
@@ -218,7 +230,7 @@ class AppUserService(
 
     }
 
-    fun deleteUser(userId: Int): ApiResponse<AppUserDto> {
+    fun deleteUser(userId: Long): ApiResponse<AppUserDto> {
         return try {
             val existingAppUser = appUserRepository.findById(userId).orElseThrow {
                 UserNotFoundException("No User found with ID $userId")

@@ -37,8 +37,6 @@ class AppUserService(
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-
-
     companion object {
         private const val MIN_PASSWORD_LENGTH = 8
     }
@@ -62,12 +60,11 @@ class AppUserService(
             )
 
         } catch (e: IllegalArgumentException) {
+            logger.error("Unauthorized: ${e.message}")
             ResponseUtil.unauthorized(
                 message = "Invalid sign-up: ${e.message}",
                 data = AppUserDto()
             )
-
-
         } catch (e: Exception) {
             logger.error("An unexpected error occurred: ${e.message}")
             ResponseUtil.internalServerError(
@@ -93,7 +90,6 @@ class AppUserService(
             )
         } catch (e: UserNotFoundException) {
             logger.error("UserNotFound: ${e.message}")
-
             ResponseUtil.notFound(
                 message = "Invalid sign-up: ${e.message}",
                 data = AppUserDto()
@@ -146,6 +142,7 @@ class AppUserService(
                 metadata = null,
             )
         }catch (e: UserNotFoundException){
+            logger.error("UserNotFound: ${e.message}")
             ResponseUtil.notFound(
                 message = "Invalid AppUsers",
                 data = emptyList()
@@ -165,25 +162,22 @@ class AppUserService(
             val appUser = appUserRepository.findById(userId).orElseThrow {
                 UserNotFoundException("No User found with ID $userId")
             }
-
             val appUserDto = appUser.toAppUserDTO()
             if (appUser.profilePicture.isNotEmpty()) {
                 val presignedUrl = s3Service.generatePresignedUrl(appUser.profilePicture)
                 appUserDto.profilePicture = presignedUrl
             }
-
-
             ResponseUtil.success(
                 message = "Find AppUser successfully",
                 data = appUserDto,
                 metadata = null
             )
         }catch (e: UserNotFoundException){
+            logger.error("UserNotFound: ${e.message}")
             ResponseUtil.notFound(
                 message = "Invalid AppUsers",
                 data = AppUserDto()
             )
-
         }catch (e: Exception) {
             logger.error("An unexpected error occurred: ${e.message}")
             ResponseUtil.internalServerError(
@@ -209,6 +203,7 @@ class AppUserService(
                 metadata = null
             )
         }catch (e: UserNotFoundException){
+            logger.error("UserNotFound: ${e.message}")
             ResponseUtil.notFound(
                 message = "Invalid AppUsers",
                 data = AppUserDto()
@@ -221,6 +216,32 @@ class AppUserService(
             )
         }
 
+    }
+
+    fun deleteUser(userId: Int): ApiResponse<AppUserDto> {
+        return try {
+            val existingAppUser = appUserRepository.findById(userId).orElseThrow {
+                UserNotFoundException("No User found with ID $userId")
+            }
+            appUserRepository.deleteById(userId)
+            ResponseUtil.success(
+                message = "User deleted successfully",
+                data = existingAppUser.toAppUserDTO(),
+                metadata = null
+                )
+        }catch (e: UserNotFoundException){
+            logger.error("UserNotFound: ${e.message}")
+            ResponseUtil.notFound(
+                message = "Invalid AppUsers",
+                data = AppUserDto()
+            )
+        }catch (e: Exception) {
+            logger.error("An unexpected error occurred: ${e.message}")
+            ResponseUtil.internalServerError(
+                message = "An unexpected error occurred: ${e.message}",
+                data = AppUserDto()
+            )
+        }
     }
 }
 

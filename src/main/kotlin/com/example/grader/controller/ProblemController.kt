@@ -13,9 +13,11 @@ import org.springframework.web.multipart.MultipartFile
 class ProblemController(private val problemService: ProblemService) {
 
     @PostMapping("")
-    fun addNewProblem(@RequestParam("title") title: String,
-                      @RequestParam("difficulty") difficulty: Difficulty,
-                      @RequestParam("pdf") pdf: MultipartFile): ResponseEntity<ApiResponse<ProblemDto>> {
+    fun addNewProblem(
+        @RequestParam("title") title: String,
+        @RequestParam("difficulty") difficulty: Difficulty,
+        @RequestParam("pdf") pdf: MultipartFile
+    ): ResponseEntity<ApiResponse<ProblemDto>> {
         val response: ApiResponse<ProblemDto> = problemService.addNewProblem(title, difficulty, pdf)
         return ResponseEntity.ok(response)
     }
@@ -26,5 +28,25 @@ class ProblemController(private val problemService: ProblemService) {
         return ResponseEntity.ok(response)
     }
 
+    @GetMapping("/{id}")
+    fun getProblemById(@PathVariable id: Long): ResponseEntity<ApiResponse<ProblemDto>> {
+        val response = problemService.getProblemById(id)
+        return ResponseEntity.ok(response)
+    }
+    @PutMapping("/{id}")
+    fun updateProblem(
+        @PathVariable id: Long,
+        @RequestParam("title") title: String,
+        @RequestParam("difficulty") difficulty: Difficulty,
+        @RequestParam(value = "pdf", required = false) pdf: MultipartFile?
+    ): ResponseEntity<ApiResponse<ProblemDto>> {
+        val response = problemService.updateProblem(id, title, difficulty, pdf)
+        return ResponseEntity.ok(response)
+    }
 
+    @DeleteMapping("/{id}")
+    fun deleteProblem(@PathVariable id: Long): ResponseEntity<ApiResponse<Unit>> {
+        val response = problemService.deleteProblem(id)
+        return ResponseEntity.ok(response)
+    }
 }

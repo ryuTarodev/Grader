@@ -14,19 +14,28 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
         return ResponseEntity(error, status)
     }
 
-    @ExceptionHandler(UserNotFoundException::class, NoSuchElementException::class, ProblemNotFoundException::class)
+    @ExceptionHandler(UserNotFoundException::class,
+                    NoSuchElementException::class,
+                    ProblemNotFoundException::class,
+                    TestCaseNotFoundException::class)
     fun handleNotFoundException(exception: RuntimeException): ResponseEntity<ApiError> =
         buildResponseEntity(HttpStatus.NOT_FOUND, exception.message)
 
-    @ExceptionHandler(SignUpException::class, PasswordMismatchException::class, UsernamePasswordMismatchException::class)
+    @ExceptionHandler(SignUpException::class,
+                    PasswordMismatchException::class,
+                    UsernamePasswordMismatchException::class)
     fun handleConflictException(exception: RuntimeException): ResponseEntity<ApiError> =
         buildResponseEntity(HttpStatus.CONFLICT, exception.message)
 
-    @ExceptionHandler(BadRequestException::class, AwsS3Exception::class, UsernameAlreadyExistsException::class)
+    @ExceptionHandler(BadRequestException::class,
+                    AwsS3Exception::class,
+                    UsernameAlreadyExistsException::class)
     fun handleBadRequestException(exception: RuntimeException): ResponseEntity<ApiError> =
         buildResponseEntity(HttpStatus.BAD_REQUEST, exception.message)
 
-    @ExceptionHandler(AccountVerificationException::class, TokenExpiredException::class, JwtAuthenticationException::class)
+    @ExceptionHandler(AccountVerificationException::class,
+                    TokenExpiredException::class,
+                    JwtAuthenticationException::class)
     fun handleUnauthorizedException(exception: RuntimeException): ResponseEntity<ApiError> =
         buildResponseEntity(HttpStatus.UNAUTHORIZED, exception.message)
 
@@ -44,6 +53,7 @@ class JwtAuthenticationException(message: String, cause: Throwable? = null) : Ru
 
 class UserNotFoundException(message: String) : RuntimeException(message)
 class ProblemNotFoundException(message: String) : RuntimeException(message)
+class TestCaseNotFoundException(message: String) : RuntimeException(message)
 
 class PasswordMismatchException(message: String) : RuntimeException(message)
 

@@ -1,8 +1,8 @@
-package com.example.grader.dto
+package com.example.grader.dto.RequstResponse
 
 import com.example.grader.entity.Type
 
-data class TestCaseRequest(
+data class UpdateTestCaseRequest(
     val problemId: Long,
     val input: String,
     val output: String,

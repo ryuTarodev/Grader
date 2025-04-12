@@ -1,6 +1,10 @@
 package com.example.grader.service
 
 import com.example.grader.dto.*
+import com.example.grader.dto.RequstResponse.LoginRequest
+import com.example.grader.dto.RequstResponse.LoginResponse
+import com.example.grader.dto.RequstResponse.ResetPasswordRequest
+import com.example.grader.dto.RequstResponse.UpdateUserRequest
 import com.example.grader.entity.AppUser
 import com.example.grader.error.UserNotFoundException
 import com.example.grader.repository.AppUserRepository
@@ -9,7 +13,6 @@ import com.example.grader.util.ResponseUtil
 import com.example.grader.util.mapUserListEntityToUserListDTO
 import com.example.grader.util.toAppUserDTO
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -17,7 +20,6 @@ import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.time.Instant
 
-import kotlin.random.Random
 
 @Service
 class AppUserService(
@@ -29,14 +31,9 @@ class AppUserService(
     private val s3Service: AwsS3Service
 
 ) {
-    @Value("\${spring.cloud.aws.s3.bucketName}")
-    private lateinit var bucketName: String
+
 
     private val logger = LoggerFactory.getLogger(javaClass)
-
-    companion object {
-        private const val MIN_PASSWORD_LENGTH = 8
-    }
 
     fun signUp(appUser: AppUser): ApiResponse<AppUserDto> {
         return try {
@@ -229,29 +226,78 @@ class AppUserService(
         }
 
     }
+    fun updateUser(userId: Long, updateRequest: UpdateUserRequest): ApiResponse<AppUserDto> {
+        return try {
+            val appUser = appUserRepository.findById(userId).orElseThrow {
+                UserNotFoundException("No User found with ID $userId")
+            }
 
-    fun deleteUser(userId: Long): ApiResponse<AppUserDto> {
+            updateRequest.appUsername.takeIf { it.isNotBlank() }?.let { newUsername ->
+                if (appUserRepository.existsAppUserByAppUsername(newUsername) && newUsername != appUser.appUsername) {
+                    throw IllegalArgumentException("Username $newUsername is already taken.")
+                }
+                appUser.appUsername = newUsername
+            }
+
+            updateRequest.role.let { appUser.role = it }
+
+            updateRequest.profilePicture.let { appUser.profilePicture = it }
+
+            appUser.updatedAt = Instant.now()
+
+            val updatedUser = appUserRepository.save(appUser)
+            val appUserDto = updatedUser.toAppUserDTO()
+
+            ResponseUtil.success(
+                message = "User updated successfully",
+                data = appUserDto,
+                metadata = null
+            )
+        } catch (e: UserNotFoundException) {
+            logger.error("UserNotFound: ${e.message}")
+            ResponseUtil.notFound(
+                message = "Invalid AppUser: ${e.message}",
+                data = AppUserDto()
+            )
+        } catch (e: IllegalArgumentException) {
+            logger.error("BadRequest: ${e.message}")
+            ResponseUtil.badRequest(
+                message = "Update failed: ${e.message}",
+                data = AppUserDto()
+            )
+        } catch (e: Exception) {
+            logger.error("Unexpected error: ${e.message}")
+            ResponseUtil.internalServerError(
+                message = "An unexpected error occurred: ${e.message}",
+                data = AppUserDto()
+            )
+        }
+    }
+
+    fun deleteUser(userId: Long): ApiResponse<Unit> {
         return try {
             val existingAppUser = appUserRepository.findById(userId).orElseThrow {
                 UserNotFoundException("No User found with ID $userId")
             }
-            appUserRepository.deleteById(userId)
+
+            appUserRepository.delete(existingAppUser)
+
             ResponseUtil.success(
                 message = "User deleted successfully",
-                data = existingAppUser.toAppUserDTO(),
+                data = Unit,
                 metadata = null
-                )
-        }catch (e: UserNotFoundException){
+            )
+        } catch (e: UserNotFoundException) {
             logger.error("UserNotFound: ${e.message}")
             ResponseUtil.notFound(
-                message = "Invalid AppUsers",
-                data = AppUserDto()
+                message = "Invalid AppUsers: ${e.message}",
+                data = Unit
             )
-        }catch (e: Exception) {
+        } catch (e: Exception) {
             logger.error("An unexpected error occurred: ${e.message}")
             ResponseUtil.internalServerError(
                 message = "An unexpected error occurred: ${e.message}",
-                data = AppUserDto()
+                data = Unit
             )
         }
     }

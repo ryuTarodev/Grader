@@ -1,6 +1,8 @@
 package com.example.grader.controller
 
 import com.example.grader.dto.*
+import com.example.grader.dto.RequstResponse.LoginRequest
+import com.example.grader.dto.RequstResponse.ResetPasswordRequest
 import com.example.grader.entity.AppUser
 import com.example.grader.service.AppUserService
 
@@ -29,7 +31,7 @@ class AuthController(private val appUserService: AppUserService) {
     @PostMapping("/resetPassword")
     fun resetPassword(@RequestBody resetPasswordRequest: ResetPasswordRequest,
 
-    ): ResponseEntity<ApiResponse<AppUserDto>> {
+                      ): ResponseEntity<ApiResponse<AppUserDto>> {
         val response: ApiResponse<AppUserDto> = appUserService.resetPassword(resetPasswordRequest)
         return  ResponseEntity.ok(response)
     }

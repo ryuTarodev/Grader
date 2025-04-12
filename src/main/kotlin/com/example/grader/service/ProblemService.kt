@@ -34,11 +34,11 @@ class ProblemService(
             )
 
             val savedProblem = problemRepository.save(problem)
-            val problemDTO = savedProblem.toProblemDTO()
+            val problemDto = savedProblem.toProblemDTO()
 
             ResponseUtil.created(
                 message = "Problem created successfully",
-                data = problemDTO,
+                data = problemDto,
                 metadata = null
             )
         } catch (e: Exception) {
@@ -57,11 +57,11 @@ class ProblemService(
                 it.pdf = s3Service.generatePresignedUrl(it.pdf)
             }
 
-            val problemListDTOs = mapProblemListEntityToProblemListDTO(savedProblems)
+            val problemListDto = mapProblemListEntityToProblemListDTO(savedProblems)
 
             ResponseUtil.success(
                 message = "List of Problems retrieved successfully",
-                data = problemListDTOs,
+                data = problemListDto,
                 metadata = null
             )
         } catch (e: Exception) {
@@ -94,32 +94,36 @@ class ProblemService(
             )
         }
     }
-
-    // Update an existing problem, including uploading a new PDF if provided
-    fun updateProblem(id: Long, title: String, difficulty: Difficulty, pdf: MultipartFile?): ApiResponse<ProblemDto> {
+    fun updateProblem(
+        id: Long,
+        title: String,
+        difficulty: Difficulty,
+        pdf: MultipartFile?
+    ): ApiResponse<ProblemDto> {
         return try {
-            val existingProblem = problemRepository.findByIdOrNull(id)
-                ?: throw ProblemNotFoundException("Problem not found")
+            val problem = problemRepository.findByIdOrNull(id)
+                ?: return ResponseUtil.notFound("Problem not found", ProblemDto())
 
-            existingProblem.title = title
-            existingProblem.difficulty = difficulty
-            existingProblem.updatedAt = Instant.now()
+            problem.title = title
+            problem.difficulty = difficulty
 
             if (pdf != null && !pdf.isEmpty) {
-                val pdfKey = s3Service.savePdfToS3(pdf)
-                existingProblem.pdf = pdfKey
+                val newPdfKey = s3Service.savePdfToS3(pdf)
+                problem.pdf = newPdfKey
             }
 
-            val savedProblem = problemRepository.save(existingProblem)
-            val problemDTO = savedProblem.toProblemDTO()
+            val updatedProblem = problemRepository.save(problem)
+            updatedProblem.pdf = s3Service.generatePresignedUrl(updatedProblem.pdf)
+
+            val updatedDto = updatedProblem.toProblemDTO()
 
             ResponseUtil.success(
                 message = "Problem updated successfully",
-                data = problemDTO,
+                data = updatedDto,
                 metadata = null
             )
         } catch (e: Exception) {
-            logger.error("An unexpected error occurred: ${e.message}")
+            logger.error("An unexpected error occurred while updating problem", e)
             ResponseUtil.internalServerError(
                 message = "An unexpected error occurred: ${e.message}",
                 data = ProblemDto()
@@ -127,28 +131,27 @@ class ProblemService(
         }
     }
 
-    // Delete a problem by ID
-    fun deleteProblem(id: Long): ApiResponse<ProblemDto?> {
+
+    fun deleteProblem(id: Long): ApiResponse<Unit> {
         return try {
             val problem = problemRepository.findByIdOrNull(id)
                 ?: return ResponseUtil.notFound(
                     message = "Problem not found",
-                    data = null
+                    data = Unit
                 )
 
-            val problemDTO = problem.toProblemDTO()
-            problemRepository.deleteById(id)
+            problemRepository.delete(problem)
 
             ResponseUtil.success(
                 message = "Problem deleted successfully",
-                data = problemDTO,
+                data = Unit,
                 metadata = null
             )
         } catch (e: Exception) {
             logger.error("An unexpected error occurred while deleting problem", e)
             ResponseUtil.internalServerError(
                 message = "An unexpected error occurred: ${e.message}",
-                data = null
+                data = Unit
             )
         }
     }

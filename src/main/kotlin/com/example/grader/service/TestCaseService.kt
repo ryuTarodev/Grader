@@ -2,7 +2,7 @@ package com.example.grader.service
 
 import com.example.grader.dto.ApiResponse
 import com.example.grader.dto.TestCaseDto
-import com.example.grader.dto.RequstResponse.UpdateTestCaseRequest
+import com.example.grader.dto.RequstResponse.TestCaseRequest
 import com.example.grader.entity.TestCase
 import com.example.grader.error.ProblemNotFoundException
 import com.example.grader.error.TestCaseNotFoundException
@@ -23,7 +23,7 @@ class TestCaseService (
 ){
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun createTestCase(testCaseRequest: UpdateTestCaseRequest): ApiResponse<TestCaseDto> {
+    fun createTestCase(testCaseRequest: TestCaseRequest): ApiResponse<TestCaseDto> {
         return try {
             val problem = problemRepository.findById(testCaseRequest.problemId).orElseThrow {
                 ProblemNotFoundException("No User found with ID $testCaseRequest.problemId")
@@ -78,7 +78,34 @@ class TestCaseService (
 
     }
 
-    fun updateTestCase(id: Long, testCaseRequest: UpdateTestCaseRequest): ApiResponse<TestCaseDto> {
+    fun getTestCaseById(id: Long): ApiResponse<TestCaseDto> {
+        return try {
+            val testCase = testCaseRepository.findByIdOrNull(id)
+                ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
+
+            val testCaseDTO = testCase.toTestCaseDTO()
+
+            ResponseUtil.success(
+                message = "Fetched TestCase successfully",
+                data = testCaseDTO,
+                metadata = null
+            )
+        } catch (e: TestCaseNotFoundException) {
+            logger.error("TestCaseNotFound: ${e.message}")
+            ResponseUtil.notFound(
+                message = "Invalid request: ${e.message}",
+                data = TestCaseDto()
+            )
+        } catch (e: Exception) {
+            logger.error("Unexpected error: ${e.message}")
+            ResponseUtil.internalServerError(
+                message = "An unexpected error occurred: ${e.message}",
+                data = TestCaseDto()
+            )
+        }
+    }
+
+    fun updateTestCase(id: Long, testCaseRequest: TestCaseRequest): ApiResponse<TestCaseDto> {
         return try {
             val existingTestCase = testCaseRepository.findByIdOrNull(id)
                 ?: throw TestCaseNotFoundException("No TestCase found with ID $id")

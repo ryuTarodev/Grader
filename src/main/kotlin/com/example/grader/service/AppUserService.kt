@@ -4,7 +4,7 @@ import com.example.grader.dto.*
 import com.example.grader.dto.RequstResponse.LoginRequest
 import com.example.grader.dto.RequstResponse.LoginResponse
 import com.example.grader.dto.RequstResponse.ResetPasswordRequest
-import com.example.grader.dto.RequstResponse.UpdateUserRequest
+import com.example.grader.dto.RequstResponse.UserRequest
 import com.example.grader.entity.AppUser
 import com.example.grader.error.UserNotFoundException
 import com.example.grader.repository.AppUserRepository
@@ -226,7 +226,7 @@ class AppUserService(
         }
 
     }
-    fun updateUser(userId: Long, updateRequest: UpdateUserRequest): ApiResponse<AppUserDto> {
+    fun updateUser(userId: Long, updateRequest: UserRequest): ApiResponse<AppUserDto> {
         return try {
             val appUser = appUserRepository.findById(userId).orElseThrow {
                 UserNotFoundException("No User found with ID $userId")

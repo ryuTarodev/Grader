@@ -1,7 +1,7 @@
 package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
-import com.example.grader.dto.RequstResponse.UpdateTestCaseRequest
+import com.example.grader.dto.RequstResponse.TestCaseRequest
 import com.example.grader.dto.TestCaseDto
 import com.example.grader.service.TestCaseService
 import org.springframework.http.ResponseEntity
@@ -13,7 +13,7 @@ class TestCaseController(private val testCaseService: TestCaseService) {
 
     @PostMapping("")
     fun addNewTestCase(@PathVariable problemId: Long,
-                       @RequestBody testCaseRequest: UpdateTestCaseRequest): ResponseEntity<ApiResponse<TestCaseDto>> {
+                       @RequestBody testCaseRequest: TestCaseRequest): ResponseEntity<ApiResponse<TestCaseDto>> {
         val response: ApiResponse<TestCaseDto> = testCaseService.createTestCase(testCaseRequest.copy(problemId = problemId))
         return ResponseEntity.ok(response)
     }
@@ -23,16 +23,24 @@ class TestCaseController(private val testCaseService: TestCaseService) {
         val response = testCaseService.getTestCasesByProblemId(problemId)
         return ResponseEntity.ok(response)
     }
+    @GetMapping("/{id}")
+    fun getTestCaseById(@PathVariable problemId: Long,
+                        @PathVariable id: Long): ResponseEntity<ApiResponse<TestCaseDto>> {
+        val response = testCaseService.getTestCaseById(id)
+        return ResponseEntity.ok(response)
+    }
 
     @PutMapping("/{id}")
     fun updateTestCase(@PathVariable id: Long,
-                       @RequestBody testCaseRequest: UpdateTestCaseRequest): ResponseEntity<ApiResponse<TestCaseDto>> {
-        val response: ApiResponse<TestCaseDto> = testCaseService.updateTestCase(id, testCaseRequest)
+                       @PathVariable problemId: Long,
+                       @RequestBody testCaseRequest: TestCaseRequest): ResponseEntity<ApiResponse<TestCaseDto>> {
+        val response: ApiResponse<TestCaseDto> = testCaseService.updateTestCase(id, testCaseRequest.copy(problemId = problemId))
         return ResponseEntity.ok(response)
     }
 
     @DeleteMapping("/{id}")
-    fun deleteTestCase(@PathVariable id: Long): ResponseEntity<ApiResponse<Unit>> {
+    fun deleteTestCase(@PathVariable problemId: Long,
+                       @PathVariable id: Long): ResponseEntity<ApiResponse<Unit>> {
         val response: ApiResponse<Unit> = testCaseService.deleteTestCase(id)
         return ResponseEntity.ok(response)
     }

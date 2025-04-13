@@ -9,6 +9,6 @@ import java.io.Serializable
  */
 data class ProblemTagDto(
     val id: Long? = null,
-    val problem: ProblemDto? = null,
+    val problemId: Long? = null,
     val tag: TagDto? = null
 ) : Serializable

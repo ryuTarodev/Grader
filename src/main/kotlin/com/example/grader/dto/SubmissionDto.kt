@@ -9,8 +9,8 @@ import java.time.Instant
  */
 data class SubmissionDto(
     val id: Long? = null,
-    val appUser: AppUserDto? = null,
-    val problem: ProblemDto? = null,
+    val appUserId: Long? = null,
+    val problemId: Long? = null,
     val code: String? = null,
     val score: Float? = 0f,
     val status: Status = Status.PENDING,

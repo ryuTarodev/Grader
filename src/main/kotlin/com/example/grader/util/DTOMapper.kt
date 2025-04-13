@@ -30,14 +30,14 @@ fun Tag.toTagDTO(): TagDto {
 fun ProblemTag.toProblemTagDTO(): ProblemTagDto {
     return ProblemTagDto(
         id = this.id,
-        problem = this.problem.toProblemDTO(),
+        problemId = this.problem.id,
         tag = this.tag.toTagDTO()
     )
 }
 fun TestCase.toTestCaseDTO(): TestCaseDto {
     return TestCaseDto(
         id = this.id,
-        problem = this.problem.toProblemDTO(),
+        problemId = this.problem.id,
         input = this.input,
         output = this.output,
         type = this.type
@@ -47,8 +47,8 @@ fun TestCase.toTestCaseDTO(): TestCaseDto {
 fun Submission.toSubmissionDTO(): SubmissionDto {
     return SubmissionDto(
         id = this.id,
-        appUser = this.appUser.toAppUserDTO(),  
-        problem = this.problem.toProblemDTO(),
+        appUserId = this.appUser.id,
+        problemId = this.problem.id,
         code = this.code,
         score = this.score,
         status = this.status,

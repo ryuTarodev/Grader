@@ -8,7 +8,7 @@ import java.io.Serializable
  */
 data class TestCaseDto(
     val id: Long? = null,
-    val problem: ProblemDto? = null,
+    val problemId: Long? = null,
     val input: String = "",
     val output: String = "",
     val type: Type = Type.PRIVATE

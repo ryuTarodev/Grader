@@ -38,5 +38,8 @@ data class Submission(
     val status: Status = Status.PENDING,
 
     @Column(name = "submitted_at", nullable = false, updatable = false)
-    val submittedAt: Instant = Instant.now()
+    val submittedAt: Instant = Instant.now(),
+
+    @Column(name = "updated_at")
+    var updatedAt: Instant? = null
 )

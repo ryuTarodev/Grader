@@ -24,6 +24,14 @@ spring:
 jwt:
   secretKey: ${JWT_SECRETKEY}
 
+rabbitmq:
+  queue:
+    name: "myQueue"
+  exchange:
+    name: "myExchange"
+  routing:
+    key: "myRoutingKey"
+
 logging:
   level:
     org:

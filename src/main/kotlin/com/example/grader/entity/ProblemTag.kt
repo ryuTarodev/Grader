@@ -1,12 +1,7 @@
 package com.example.grader.entity
 
-import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
-import jakarta.persistence.Table
+import jakarta.persistence.*
+import java.time.Instant
 
 @Entity
 @Table(name = "problem_tags")
@@ -21,5 +16,13 @@ data class ProblemTag(
 
     @ManyToOne
     @JoinColumn(name = "tag_id", nullable = false)
-    var tag: Tag = Tag()
+    var tag: Tag = Tag(),
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    val createdAt: Instant = Instant.now(),
+
+    @Column(name = "updated_at")
+    var updatedAt: Instant? = null
+
+
 )

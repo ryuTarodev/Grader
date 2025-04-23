@@ -27,6 +27,7 @@ jwt:
 rabbitmq:
   queue:
     name: "myQueue"
+    result: "resultQueue"
   exchange:
     name: "myExchange"
   routing:

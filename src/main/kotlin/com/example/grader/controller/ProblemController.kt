@@ -2,6 +2,7 @@ package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
 import com.example.grader.dto.ProblemDto
+import com.example.grader.dto.RequstResponse.ProblemRequest
 import com.example.grader.entity.Difficulty
 import com.example.grader.service.ProblemService
 import org.springframework.http.ResponseEntity
@@ -18,7 +19,7 @@ class ProblemController(private val problemService: ProblemService) {
         @RequestParam("difficulty") difficulty: Difficulty,
         @RequestParam("pdf") pdf: MultipartFile
     ): ResponseEntity<ApiResponse<ProblemDto>> {
-        val response: ApiResponse<ProblemDto> = problemService.addNewProblem(title, difficulty, pdf)
+        val response: ApiResponse<ProblemDto> = problemService.addNewProblem(problemRequest = ProblemRequest(title, difficulty, pdf))
         return ResponseEntity.ok(response)
     }
 
@@ -38,9 +39,9 @@ class ProblemController(private val problemService: ProblemService) {
         @PathVariable id: Long,
         @RequestParam("title") title: String,
         @RequestParam("difficulty") difficulty: Difficulty,
-        @RequestParam(value = "pdf", required = false) pdf: MultipartFile?
+        @RequestParam(value = "pdf", required = false) pdf: MultipartFile
     ): ResponseEntity<ApiResponse<ProblemDto>> {
-        val response = problemService.updateProblem(id, title, difficulty, pdf)
+        val response = problemService.updateProblem(id, problemRequest = ProblemRequest(title, difficulty, pdf))
         return ResponseEntity.ok(response)
     }
 

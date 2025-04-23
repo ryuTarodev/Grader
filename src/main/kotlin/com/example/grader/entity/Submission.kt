@@ -28,14 +28,14 @@ data class Submission(
     var problem: Problem = Problem(),
 
     @Column
-    val code: String? = null,
+    var code: String? = null,
 
     @Column
-    val score: Float? = 0f,
+    var score: Float? = 0f,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    val status: Status = Status.PENDING,
+    var status: Status = Status.PENDING,
 
     @Column(name = "submitted_at", nullable = false, updatable = false)
     val submittedAt: Instant = Instant.now(),

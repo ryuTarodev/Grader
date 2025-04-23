@@ -1,27 +1,18 @@
 package com.example.grader.service
 
 import com.example.grader.dto.ApiResponse
-import com.example.grader.dto.ProblemDto
 import com.example.grader.dto.RequstResponse.SubmissionRequest
 import com.example.grader.dto.SubmissionDto
-import com.example.grader.dto.SubmissionMessage
-import com.example.grader.entity.Problem
+import com.example.grader.dto.SubmissionSendMessage
+import com.example.grader.entity.Status
 import com.example.grader.entity.Submission
-import com.example.grader.error.ProblemNotFoundException
-import com.example.grader.error.TestCaseNotFoundException
-import com.example.grader.error.UserNotFoundException
-import com.example.grader.repository.AppUserRepository
-import com.example.grader.repository.ProblemRepository
-import com.example.grader.repository.SubmissionRepository
-import com.example.grader.repository.TestCaseRepository
-import com.example.grader.util.ResponseUtil
-import com.example.grader.util.mapTestCaseListEntityToTestCaseListDTO
-import com.example.grader.util.toSubmissionDTO
+import com.example.grader.error.*
+import com.example.grader.repository.*
+import com.example.grader.util.*
 import org.slf4j.LoggerFactory
-import org.springframework.amqp.rabbit.core.RabbitTemplate
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class SubmissionService(
@@ -29,50 +20,115 @@ class SubmissionService(
     private val appUserRepository: AppUserRepository,
     private val submissionRepository: SubmissionRepository,
     private val testCaseRepository: TestCaseRepository,
-    private val rabbitTemplate: RabbitTemplate,
+    private val submissionProducer: SubmissionProducer
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    @Value("\${rabbitmq.exchange.name}")
-    private lateinit var exchangeName: String
-
-    @Value("\${rabbitmq.routing.key}")
-    private lateinit var routingKey: String
-
-
-    fun createSubmission(submissionRequest: SubmissionRequest): ApiResponse<SubmissionDto> {
+    fun createSubmission(problemId: Long, appUserId: Long, code: String): ApiResponse<SubmissionDto> {
         return try {
-            val testCases = testCaseRepository.findByProblemId(submissionRequest.problemId)
+            val testCases = testCaseRepository.findByProblemId(problemId)
                 ?: throw TestCaseNotFoundException("TestCaseNotFound")
-            val appUser = appUserRepository.findByIdOrNull(submissionRequest.appUserId) ?: throw UserNotFoundException("User Not Found")
-            val problem = problemRepository.findByIdOrNull(submissionRequest.problemId) ?: throw ProblemNotFoundException("Problem not found")
+            val appUser = appUserRepository.findByIdOrNull(appUserId)
+                ?: throw UserNotFoundException("User Not Found")
+            val problem = problemRepository.findByIdOrNull(problemId)
+                ?: throw ProblemNotFoundException("Problem not found")
+
             val submission = Submission(
                 appUser = appUser,
                 problem = problem,
-                code = submissionRequest.code,
+                code = code
             )
 
             val savedSubmission = submissionRepository.save(submission)
-            val sumissionDto = submission.toSubmissionDTO()
+            val submissionDto = savedSubmission.toSubmissionDTO()
+            val message = SubmissionSendMessage(
+                submissionDto,
+                mapTestCaseListEntityToTestCaseListDTO(testCases)
+            )
 
-            val message = SubmissionMessage(sumissionDto, mapTestCaseListEntityToTestCaseListDTO(testCases))
-
-            rabbitTemplate.convertAndSend(exchangeName, routingKey, message)
-            logger.info("Sent submission ${savedSubmission.id} to RabbitMQ")
+            logger.info("Sending code: ${submission.code}") // Debug log
+            submissionProducer.sendSubmission(message)
 
             ResponseUtil.success(
                 message = "sending message to RabbitMQ",
-                data = sumissionDto,
+                data = submissionDto,
                 metadata = null
             )
-        }catch (e: Exception) {
-            logger.error("An unexpected error occurred while updating problem", e)
+        } catch (e: Exception) {
+            logger.error("An unexpected error occurred while creating submission", e)
+            ResponseUtil.internalServerError(
+                message = "An unexpected error occurred: ${e.message}",
+                data = SubmissionDto(status = Status.REJECTED)
+            )
+        }
+    }
+
+    fun updateSubmission(submissionId: Long, score: Float = 0f): ApiResponse<SubmissionDto> {
+        return try {
+            val existingSubmission = submissionRepository.findByIdOrNull(submissionId)
+                ?: throw SubmissionNotFoundException("No submission found with ID $submissionId")
+
+            existingSubmission.score = score
+            existingSubmission.status = Status.ACCEPTED
+            val savedSubmission = submissionRepository.save(existingSubmission)
+            val submissionDto = savedSubmission.toSubmissionDTO()
+
+            ResponseUtil.success(
+                message = "Submission updated successfully.",
+                data = submissionDto,
+                metadata = null
+            )
+        } catch (e: Exception) {
+            logger.error("Error updating submission", e)
             ResponseUtil.internalServerError(
                 message = "An unexpected error occurred: ${e.message}",
                 data = SubmissionDto()
             )
         }
+    }
 
+    fun getSubmissionByProblemIdAndAppUserId(problemId: Long, appUserId: Long): ApiResponse<List<SubmissionDto>> {
+        return try {
+            val submissions = submissionRepository.findAllByProblemIdAndAppUserId(problemId, appUserId)
+                ?: throw SubmissionNotFoundException("Submission not found")
+            val submissionDtoList = mapSubmissionListEntityToSubmissionListDTO(submissions)
+
+            ResponseUtil.success(
+                message = "List all submissions",
+                data = submissionDtoList,
+                metadata = null
+            )
+        } catch (e: SubmissionNotFoundException) {
+            logger.error("SubmissionNotFound: ${e.message}")
+            ResponseUtil.notFound(
+                message = "Invalid request: ${e.message}",
+                data = emptyList()
+            )
+        } catch (e: Exception) {
+            logger.error("An unexpected error occurred while getting submissions", e)
+            ResponseUtil.internalServerError(
+                message = "An unexpected error occurred: ${e.message}",
+                data = emptyList()
+            )
+        }
+    }
+
+    @Transactional
+    fun deleteAllSubmissions(problemId: Long, appUserId: Long): ApiResponse<Unit> {
+        return try {
+            submissionRepository.deleteAllByProblemIdAndAppUserId(problemId, appUserId)
+            ResponseUtil.success(
+                message = "Remove Successfully",
+                data = Unit,
+                metadata = null
+            )
+        } catch (e: Exception) {
+            logger.error("An unexpected error occurred while deleting submissions", e)
+            ResponseUtil.internalServerError(
+                message = "An unexpected error occurred: ${e.message}",
+                data = Unit
+            )
+        }
     }
 }

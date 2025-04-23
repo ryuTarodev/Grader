@@ -1,9 +1,6 @@
 package com.example.grader.dto
 
-import com.example.grader.entity.Submission
-import com.example.grader.entity.TestCase
-
-data class SubmissionMessage (
+data class SubmissionSendMessage (
     val submissionDto: SubmissionDto,
     val testCasesDtoList: List<TestCaseDto>,
     )

@@ -2,6 +2,7 @@ package com.example.grader.service
 
 import com.example.grader.dto.ApiResponse
 import com.example.grader.dto.ProblemDto
+import com.example.grader.dto.RequstResponse.ProblemRequest
 import com.example.grader.entity.Difficulty
 import com.example.grader.entity.Problem
 import com.example.grader.error.ProblemNotFoundException
@@ -23,13 +24,13 @@ class ProblemService(
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun addNewProblem(title: String, difficulty: Difficulty, pdf: MultipartFile): ApiResponse<ProblemDto> {
+    fun addNewProblem(problemRequest: ProblemRequest): ApiResponse<ProblemDto> {
         return try {
-            val pdfKey = s3Service.savePdfToS3(pdf)
+            val pdfKey = s3Service.savePdfToS3(problemRequest.pdf)
 
             val problem = Problem(
-                title = title,
-                difficulty = difficulty,
+                title = problemRequest.title,
+                difficulty = problemRequest.difficulty,
                 pdf = pdfKey
             )
 
@@ -96,19 +97,17 @@ class ProblemService(
     }
     fun updateProblem(
         id: Long,
-        title: String,
-        difficulty: Difficulty,
-        pdf: MultipartFile?
+        problemRequest: ProblemRequest
     ): ApiResponse<ProblemDto> {
         return try {
             val problem = problemRepository.findByIdOrNull(id)
                 ?: return ResponseUtil.notFound("Problem not found", ProblemDto())
 
-            problem.title = title
-            problem.difficulty = difficulty
+            problem.title = problemRequest.title
+            problem.difficulty = problemRequest.difficulty
 
-            if (pdf != null && !pdf.isEmpty) {
-                val newPdfKey = s3Service.savePdfToS3(pdf)
+            if (!problemRequest.pdf.isEmpty) {
+                val newPdfKey = s3Service.savePdfToS3(problemRequest.pdf)
                 problem.pdf = newPdfKey
             }
 

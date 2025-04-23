@@ -17,7 +17,8 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
     @ExceptionHandler(UserNotFoundException::class,
                     NoSuchElementException::class,
                     ProblemNotFoundException::class,
-                    TestCaseNotFoundException::class)
+                    TestCaseNotFoundException::class,
+                    SubmissionNotFoundException::class,)
     fun handleNotFoundException(exception: RuntimeException): ResponseEntity<ApiError> =
         buildResponseEntity(HttpStatus.NOT_FOUND, exception.message)
 
@@ -54,6 +55,7 @@ class JwtAuthenticationException(message: String, cause: Throwable? = null) : Ru
 class UserNotFoundException(message: String) : RuntimeException(message)
 class ProblemNotFoundException(message: String) : RuntimeException(message)
 class TestCaseNotFoundException(message: String) : RuntimeException(message)
+class SubmissionNotFoundException(message: String) : RuntimeException(message)
 
 class PasswordMismatchException(message: String) : RuntimeException(message)
 

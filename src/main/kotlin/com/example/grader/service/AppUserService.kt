@@ -45,11 +45,10 @@ class AppUserService(
 
             appUser.clientPassword = passwordEncoder.encode(appUser.clientPassword)
             val savedAppUser = appUserRepository.save(appUser)
-            val appUserDTO = savedAppUser.toAppUserDTO()
 
             ResponseUtil.created(
                 message = "User created successfully",
-                data = appUserDTO,
+                data = savedAppUser.toAppUserDTO(),
                 metadata = null
             )
 
@@ -90,11 +89,11 @@ class AppUserService(
             appUser.clientPassword = passwordEncoder.encode(resetPasswordRequest.newPassword)
 
             val savedAppUser = appUserRepository.save(appUser)
-            val appUserDTO = savedAppUser.toAppUserDTO()
+
 
             ResponseUtil.created(
                 message = "User changed password successfully",
-                data = appUserDTO,
+                data = savedAppUser.toAppUserDTO(),
                 metadata = null
             )
         } catch (e: UserNotFoundException) {
@@ -118,13 +117,13 @@ class AppUserService(
             val appUser = appUserRepository.findAppUserByAppUsername(loginRequest.username)
                 ?: throw UserNotFoundException("User not found with username: ${loginRequest.username}")
             val accessToken = jwtService.generateAccessToken(appUser)
-            val appUserDTO = appUser.toAppUserDTO()
-            logger.info("$appUserDTO login successful!")
+
+            logger.info("$appUser login successful!")
             val loginResponse = LoginResponse(
                 expirationTime = "1 Days",
                 accessToken = accessToken,
             )
-            ResponseUtil.success("User login successfully", appUserDTO, loginResponse)
+            ResponseUtil.success("User login successfully", appUser.toAppUserDTO(), loginResponse)
         } catch (e: UserNotFoundException) {
             logger.error("User not found: ${e.message}")
             ResponseUtil.notFound(
@@ -143,11 +142,10 @@ class AppUserService(
     fun getAppUsers(): ApiResponse<List<AppUserDto>> {
         return try {
             val appUserList = appUserRepository.findAll() ?: throw UserNotFoundException("No User Initialize")
-            val appUserDtoList = mapUserListEntityToUserListDTO(appUserList)
             logger.info("Find AppUsers successfully")
             ResponseUtil.success(
                 message = "Find AppUsers successfully",
-                data = appUserDtoList,
+                data = mapUserListEntityToUserListDTO(appUserList),
                 metadata = null,
             )
         }catch (e: UserNotFoundException){
@@ -205,10 +203,9 @@ class AppUserService(
             }
             appUser.profilePicture = pngName
             appUserRepository.save(appUser)
-            val appUserDto = appUser.toAppUserDTO()
             ResponseUtil.success(
                 message = "Upload $pngName to $userId successfully",
-                data = appUserDto,
+                data = appUser.toAppUserDTO(),
                 metadata = null
             )
         }catch (e: UserNotFoundException){
@@ -246,11 +243,11 @@ class AppUserService(
             appUser.updatedAt = Instant.now()
 
             val updatedUser = appUserRepository.save(appUser)
-            val appUserDto = updatedUser.toAppUserDTO()
+
 
             ResponseUtil.success(
                 message = "User updated successfully",
-                data = appUserDto,
+                data = updatedUser.toAppUserDTO(),
                 metadata = null
             )
         } catch (e: UserNotFoundException) {

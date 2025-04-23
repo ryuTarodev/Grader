@@ -35,11 +35,10 @@ class ProblemService(
             )
 
             val savedProblem = problemRepository.save(problem)
-            val problemDto = savedProblem.toProblemDTO()
 
             ResponseUtil.created(
                 message = "Problem created successfully",
-                data = problemDto,
+                data = savedProblem.toProblemDTO(),
                 metadata = null
             )
         } catch (e: Exception) {
@@ -58,11 +57,11 @@ class ProblemService(
                 it.pdf = s3Service.generatePresignedUrl(it.pdf)
             }
 
-            val problemListDto = mapProblemListEntityToProblemListDTO(savedProblems)
+
 
             ResponseUtil.success(
                 message = "List of Problems retrieved successfully",
-                data = problemListDto,
+                data = mapProblemListEntityToProblemListDTO(savedProblems),
                 metadata = null
             )
         } catch (e: Exception) {
@@ -81,10 +80,9 @@ class ProblemService(
 
             savedProblem.pdf = s3Service.generatePresignedUrl(savedProblem.pdf)
 
-            val problemDTO = savedProblem.toProblemDTO()
             ResponseUtil.success(
                 message = "Problem retrieved successfully",
-                data = problemDTO,
+                data = savedProblem.toProblemDTO(),
                 metadata = null
             )
         } catch (e: Exception) {
@@ -114,11 +112,11 @@ class ProblemService(
             val updatedProblem = problemRepository.save(problem)
             updatedProblem.pdf = s3Service.generatePresignedUrl(updatedProblem.pdf)
 
-            val updatedDto = updatedProblem.toProblemDTO()
+
 
             ResponseUtil.success(
                 message = "Problem updated successfully",
-                data = updatedDto,
+                data = updatedProblem.toProblemDTO(),
                 metadata = null
             )
         } catch (e: Exception) {

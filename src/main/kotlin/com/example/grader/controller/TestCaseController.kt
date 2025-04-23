@@ -14,7 +14,7 @@ class TestCaseController(private val testCaseService: TestCaseService) {
     @PostMapping("")
     fun addNewTestCase(@PathVariable problemId: Long,
                        @RequestBody testCaseRequest: TestCaseRequest): ResponseEntity<ApiResponse<TestCaseDto>> {
-        val response: ApiResponse<TestCaseDto> = testCaseService.createTestCase(testCaseRequest.copy(problemId = problemId))
+        val response: ApiResponse<TestCaseDto> = testCaseService.createTestCase(testCaseRequest, problemId)
         return ResponseEntity.ok(response)
     }
 
@@ -34,7 +34,7 @@ class TestCaseController(private val testCaseService: TestCaseService) {
     fun updateTestCase(@PathVariable id: Long,
                        @PathVariable problemId: Long,
                        @RequestBody testCaseRequest: TestCaseRequest): ResponseEntity<ApiResponse<TestCaseDto>> {
-        val response: ApiResponse<TestCaseDto> = testCaseService.updateTestCase(id, testCaseRequest.copy(problemId = problemId))
+        val response: ApiResponse<TestCaseDto> = testCaseService.updateTestCase(id, testCaseRequest, problemId)
         return ResponseEntity.ok(response)
     }
 

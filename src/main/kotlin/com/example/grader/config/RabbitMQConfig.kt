@@ -23,15 +23,15 @@ class RabbitMQConfig {
     @Value("\${rabbitmq.routing.key}")
     private lateinit var submissionRoutingKey: String
 
-    // ✅ Declare submissionQueue
+
     @Bean
     fun submissionQueue(): Queue = Queue(submissionQueueName, false)
 
-    // ✅ Declare resultQueue
+
     @Bean
     fun resultQueue(): Queue = Queue(resultQueueName, false)
 
-    // ✅ Declare exchange
+
     @Bean
     fun exchange(): TopicExchange = TopicExchange(exchangeName)
 

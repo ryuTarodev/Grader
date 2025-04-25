@@ -203,9 +203,10 @@ class AppUserService(
             }
             appUser.profilePicture = pngName
             appUserRepository.save(appUser)
+            val appUserDto = appUser.toAppUserDTO()
             ResponseUtil.success(
                 message = "Upload $pngName to $userId successfully",
-                data = appUser.toAppUserDTO(),
+                data = appUserDto,
                 metadata = null
             )
         }catch (e: UserNotFoundException){

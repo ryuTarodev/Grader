@@ -31,6 +31,9 @@ data class Submission(
     var code: String? = null,
 
     @Column
+    var language: String? = null,
+
+    @Column
     var score: Float? = 0f,
 
     @Enumerated(EnumType.STRING)

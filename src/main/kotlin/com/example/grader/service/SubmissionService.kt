@@ -25,7 +25,7 @@ class SubmissionService(
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun createSubmission(problemId: Long, appUserId: Long, code: String): ApiResponse<SubmissionDto> {
+    fun createSubmission(problemId: Long, appUserId: Long, code: String, language: String): ApiResponse<SubmissionDto> {
         return try {
             val testCases = testCaseRepository.findByProblemId(problemId)
                 ?: throw TestCaseNotFoundException("TestCaseNotFound")
@@ -37,7 +37,8 @@ class SubmissionService(
             val submission = Submission(
                 appUser = appUser,
                 problem = problem,
-                code = code
+                code = code,
+                language = language
             )
 
             val savedSubmission = submissionRepository.save(submission)

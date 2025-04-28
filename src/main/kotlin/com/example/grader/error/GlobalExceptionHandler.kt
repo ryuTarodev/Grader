@@ -18,7 +18,10 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                     NoSuchElementException::class,
                     ProblemNotFoundException::class,
                     TestCaseNotFoundException::class,
-                    SubmissionNotFoundException::class,)
+                    SubmissionNotFoundException::class,
+                    TagNotFoundException::class,
+        ProblemTagNotFoundException::class)
+
     fun handleNotFoundException(exception: RuntimeException): ResponseEntity<ApiError> =
         buildResponseEntity(HttpStatus.NOT_FOUND, exception.message)
 
@@ -56,6 +59,8 @@ class UserNotFoundException(message: String) : RuntimeException(message)
 class ProblemNotFoundException(message: String) : RuntimeException(message)
 class TestCaseNotFoundException(message: String) : RuntimeException(message)
 class SubmissionNotFoundException(message: String) : RuntimeException(message)
+class TagNotFoundException(message: String) : RuntimeException(message)
+class ProblemTagNotFoundException(message: String) : RuntimeException(message)
 
 class PasswordMismatchException(message: String) : RuntimeException(message)
 

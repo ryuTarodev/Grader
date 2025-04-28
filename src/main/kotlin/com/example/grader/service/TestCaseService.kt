@@ -11,6 +11,7 @@ import com.example.grader.repository.TestCaseRepository
 import com.example.grader.util.ResponseUtil
 import com.example.grader.util.mapTestCaseListEntityToTestCaseListDTO
 import com.example.grader.util.toTestCaseDTO
+import jdk.incubator.vector.VectorOperators.Test
 import org.slf4j.LoggerFactory
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -60,7 +61,7 @@ class TestCaseService(
 
     fun getTestCasesByProblemId(problemId: Long): ApiResponse<List<TestCaseDto>> {
         return try {
-            val testCaseList = testCaseRepository.findByProblemId(problemId)
+            val testCaseList = testCaseRepository.findByProblemId(problemId) ?: throw TestCaseNotFoundException("No TestCase found with ID $problemId")
             val testCaseListDto = mapTestCaseListEntityToTestCaseListDTO(testCaseList)
 
             ResponseUtil.success(

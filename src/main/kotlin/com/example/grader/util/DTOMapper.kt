@@ -50,6 +50,7 @@ fun Submission.toSubmissionDTO(): SubmissionDto {
         appUserId = this.appUser.id,
         problemId = this.problem.id,
         code = this.code,
+        language = this.language,
         score = this.score,
         status = this.status,
         submittedAt = this.submittedAt

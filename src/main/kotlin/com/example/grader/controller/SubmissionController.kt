@@ -8,21 +8,21 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/api/problems/{problemId}/user/{appUserId}/submissions")
+@RequestMapping("/api/submissions")
 class SubmissionController(private val submissionService: SubmissionService) {
 
 
-    @PostMapping("")
+    @PostMapping("/problems/{problemId}/user/{appUserId}")
     fun sendSubmission(
         @PathVariable problemId: Long,
         @PathVariable appUserId: Long,
         @RequestBody submissionRequest: SubmissionRequest
     ): ResponseEntity<ApiResponse<SubmissionDto>> {
-        val response = submissionService.createSubmission(problemId, appUserId, submissionRequest.code)
+        val response = submissionService.createSubmission(problemId, appUserId, submissionRequest.code, submissionRequest.language)
         return ResponseEntity.status(response.statusCode).body(response)
     }
 
-    @GetMapping("")
+    @GetMapping("/problems/{problemId}/user/{appUserId}")
     fun getSubmissions(
         @PathVariable problemId: Long,
         @PathVariable appUserId: Long,
@@ -30,8 +30,8 @@ class SubmissionController(private val submissionService: SubmissionService) {
         return submissionService.getSubmissionByProblemIdAndAppUserId(problemId, appUserId)
     }
 
-    @DeleteMapping("")
-    fun deleteAllSubmissions(
+    @DeleteMapping("/problems/{problemId}/user/{appUserId}")
+    fun clearAllSubmissions(
         @PathVariable problemId: Long,
         @PathVariable appUserId: Long): ApiResponse<Unit> {
         return submissionService.deleteAllSubmissions(problemId, appUserId)

@@ -12,7 +12,7 @@ data class ProblemTag(
 
     @ManyToOne
     @JoinColumn(name = "problem_id", nullable = false)
-    val problem: Problem = Problem(),
+    var problem: Problem = Problem(),
 
     @ManyToOne
     @JoinColumn(name = "tag_id", nullable = false)

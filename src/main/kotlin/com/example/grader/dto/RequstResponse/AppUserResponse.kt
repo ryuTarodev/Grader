@@ -1,17 +1,13 @@
-package com.example.grader.dto
+package com.example.grader.dto.RequstResponse
 
 import com.example.grader.entity.Role
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
-import java.io.Serializable
 
-/**
- * DTO for {@link com.example.grader.entity.AppUser}
- */
-data class AppUserDto(
+data class AppUserResponse(
     val id: Long = 0,
     val appUsername: String = "",
     val role: Role = Role.ROLE_USER,
     var profilePicture: String = ""
-) : Serializable
+)

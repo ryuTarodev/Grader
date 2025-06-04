@@ -1,13 +1,14 @@
 package com.example.grader.dto.RequstResponse
 
-import com.example.grader.entity.Type
+import com.example.grader.entity.Role
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 
-data class TestCaseRequest(
-    val input: String,
-    val output: String,
+data class AppUserRequest(
     @field:NotNull @field:NotEmpty @field:NotBlank
-    val type: Type
+    val appUsername: String,
+    @field:NotNull @field:NotEmpty @field:NotBlank
+    val role: Role,
+    val profilePicture: String
 )

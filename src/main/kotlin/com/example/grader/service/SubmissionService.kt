@@ -1,6 +1,7 @@
 package com.example.grader.service
 
 import com.example.grader.dto.ApiResponse
+import com.example.grader.dto.ProblemTagDto
 import com.example.grader.dto.RequstResponse.SubmissionRequest
 import com.example.grader.dto.SubmissionDto
 import com.example.grader.dto.SubmissionSendMessage
@@ -22,114 +23,88 @@ class SubmissionService(
     private val testCaseRepository: TestCaseRepository,
     private val submissionProducer: SubmissionProducer
 ) {
+    companion object {
+        private val EMPTY_SUBMISSION = SubmissionDto()
+    }
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
     fun createSubmission(problemId: Long, appUserId: Long, code: String, language: String): ApiResponse<SubmissionDto> {
-        return try {
-            val testCases = testCaseRepository.findByProblemId(problemId)
-                ?: throw TestCaseNotFoundException("TestCaseNotFound")
-            val appUser = appUserRepository.findByIdOrNull(appUserId)
-                ?: throw UserNotFoundException("User Not Found")
-            val problem = problemRepository.findByIdOrNull(problemId)
-                ?: throw ProblemNotFoundException("Problem not found")
+        val testCases = testCaseRepository.findByProblemId(problemId)
+            ?: throw TestCaseNotFoundException("TestCase not found")
 
-            val submission = Submission(
-                appUser = appUser,
-                problem = problem,
-                code = code,
-                language = language
-            )
+        val appUser = appUserRepository.findByIdOrNull(appUserId)
+            ?: throw UserNotFoundException("User $appUserId not found")
 
-            val savedSubmission = submissionRepository.save(submission)
-            val submissionDto = savedSubmission.toSubmissionDTO()
-            val message = SubmissionSendMessage(
-                submissionDto,
-                mapTestCaseListEntityToTestCaseListDTO(testCases)
-            )
+        val problem = problemRepository.findByIdOrNull(problemId)
+            ?: throw ProblemNotFoundException("Problem $problemId not found")
 
-            logger.info("Sending code: ${submission.code}") // Debug log
-            submissionProducer.sendSubmission(message)
+        val submission = Submission(
+            appUser = appUser,
+            problem = problem,
+            code = code,
+            language = language
+        )
 
-            ResponseUtil.success(
-                message = "sending message to RabbitMQ",
-                data = submissionDto,
-                metadata = null
-            )
-        } catch (e: Exception) {
-            logger.error("An unexpected error occurred while creating submission", e)
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = SubmissionDto(status = Status.REJECTED)
-            )
-        }
+        val savedSubmission = submissionRepository.save(submission)
+
+        val submissionDto = savedSubmission.toSubmissionDTO()
+        val message = SubmissionSendMessage(
+            submissionDto,
+            mapTestCaseListEntityToTestCaseListDTO(testCases)
+        )
+
+        logger.info("Sending submission ${savedSubmission.id} to RabbitMQ")
+        submissionProducer.sendSubmission(message)
+
+        return ResponseUtil.success(
+            message = "Submission sent to RabbitMQ.",
+            data = submissionDto,
+            metadata = null
+        )
     }
 
     fun updateSubmission(submissionId: Long, score: Float = 0f): ApiResponse<SubmissionDto> {
-        return try {
-            val existingSubmission = submissionRepository.findByIdOrNull(submissionId)
-                ?: throw SubmissionNotFoundException("No submission found with ID $submissionId")
 
-            existingSubmission.score = score
-            existingSubmission.status = Status.ACCEPTED
-            val savedSubmission = submissionRepository.save(existingSubmission)
-            val submissionDto = savedSubmission.toSubmissionDTO()
+        val existingSubmission = submissionRepository.findByIdOrNull(submissionId)
+            ?: throw SubmissionNotFoundException("No submission found with ID $submissionId")
 
-            ResponseUtil.success(
-                message = "Submission updated successfully.",
-                data = submissionDto,
-                metadata = null
-            )
-        } catch (e: Exception) {
-            logger.error("Error updating submission", e)
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = SubmissionDto()
-            )
-        }
+        existingSubmission.score = score
+        existingSubmission.status = Status.ACCEPTED
+        val savedSubmission = submissionRepository.save(existingSubmission)
+        val submissionDto = savedSubmission.toSubmissionDTO()
+
+        return ResponseUtil.success(
+            message = "Submission updated successfully.",
+            data = submissionDto,
+            metadata = null
+        )
+
     }
 
     fun getSubmissionByProblemIdAndAppUserId(problemId: Long, appUserId: Long): ApiResponse<List<SubmissionDto>> {
-        return try {
-            val submissions = submissionRepository.findAllByProblemIdAndAppUserId(problemId, appUserId)
-                ?: throw SubmissionNotFoundException("Submission not found")
-            val submissionDtoList = mapSubmissionListEntityToSubmissionListDTO(submissions)
 
-            ResponseUtil.success(
-                message = "List all submissions",
-                data = submissionDtoList,
-                metadata = null
-            )
-        } catch (e: SubmissionNotFoundException) {
-            logger.error("SubmissionNotFound: ${e.message}")
-            ResponseUtil.notFound(
-                message = "Invalid request: ${e.message}",
-                data = emptyList()
-            )
-        } catch (e: Exception) {
-            logger.error("An unexpected error occurred while getting submissions", e)
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = emptyList()
-            )
-        }
+        val submissions = submissionRepository.findAllByProblemIdAndAppUserId(problemId, appUserId)
+            ?: throw SubmissionNotFoundException("Submission not found")
+        val submissionDtoList = mapSubmissionListEntityToSubmissionListDTO(submissions)
+
+        return ResponseUtil.success(
+            message = "List all submissions",
+            data = submissionDtoList,
+            metadata = null
+        )
+
     }
 
     @Transactional
     fun deleteAllSubmissions(problemId: Long, appUserId: Long): ApiResponse<Unit> {
-        return try {
-            submissionRepository.deleteAllByProblemIdAndAppUserId(problemId, appUserId)
-            ResponseUtil.success(
-                message = "Remove Successfully",
-                data = Unit,
-                metadata = null
-            )
-        } catch (e: Exception) {
-            logger.error("An unexpected error occurred while deleting submissions", e)
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = Unit
-            )
-        }
+
+        submissionRepository.deleteAllByProblemIdAndAppUserId(problemId, appUserId)
+        return ResponseUtil.success(
+            message = "Remove Successfully",
+            data = Unit,
+            metadata = null
+        )
+
     }
 }

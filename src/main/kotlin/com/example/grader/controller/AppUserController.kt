@@ -2,18 +2,29 @@ package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
 import com.example.grader.dto.AppUserDto
+import com.example.grader.entity.AppUser
 import com.example.grader.service.AppUserService
+import com.example.grader.service.ClientSessionService
+import com.example.grader.util.toAppUserDTO
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 
 @RestController
 @RequestMapping("/api/users")
-class AppUserController(private val appUserService: AppUserService) {
+class AppUserController(
+    private val appUserService: AppUserService,
+    private val clientSessionService: ClientSessionService
+) {
 
     @GetMapping("")
     fun getAppUsers(): ResponseEntity<ApiResponse<List<AppUserDto>>> {
         val response: ApiResponse<List<AppUserDto>> = appUserService.getAppUsers()
+        return ResponseEntity.ok(response)
+    }
+    @GetMapping("/me")
+    fun getCurrentUser(): ResponseEntity<ApiResponse<AppUserDto>> {
+        val response: ApiResponse<AppUserDto> = clientSessionService.getCurrentUserResponse()
         return ResponseEntity.ok(response)
     }
 

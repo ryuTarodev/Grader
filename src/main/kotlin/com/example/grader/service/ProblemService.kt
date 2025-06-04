@@ -1,6 +1,7 @@
 package com.example.grader.service
 
 import com.example.grader.dto.ApiResponse
+import com.example.grader.dto.AppUserDto
 import com.example.grader.dto.ProblemDto
 import com.example.grader.dto.RequstResponse.ProblemRequest
 import com.example.grader.entity.Difficulty
@@ -22,134 +23,109 @@ class ProblemService(
     private val problemRepository: ProblemRepository,
     private val s3Service: AwsS3Service
 ) {
+    companion object {
+        private val EMPTY_PROBLEM = ProblemDto()
+    }
+
     private val logger = LoggerFactory.getLogger(javaClass)
 
     fun addNewProblem(problemRequest: ProblemRequest): ApiResponse<ProblemDto> {
-        return try {
-            val pdfKey = s3Service.savePdfToS3(problemRequest.pdf)
 
-            val problem = Problem(
-                title = problemRequest.title,
-                difficulty = problemRequest.difficulty,
-                pdf = pdfKey
-            )
+        val pdfKey = s3Service.savePdfToS3(problemRequest.pdf)
 
-            val savedProblem = problemRepository.save(problem)
+        val problem = Problem(
+            title = problemRequest.title,
+            difficulty = problemRequest.difficulty,
+            pdf = pdfKey
+        )
 
-            ResponseUtil.created(
-                message = "Problem created successfully",
-                data = savedProblem.toProblemDTO(),
-                metadata = null
-            )
-        } catch (e: Exception) {
-            logger.error("An unexpected error occurred: ${e.message}")
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = ProblemDto()
-            )
-        }
+        val savedProblem = problemRepository.save(problem)
+
+        return ResponseUtil.created(
+            message = "Problem created successfully",
+            data = savedProblem.toProblemDTO(),
+            metadata = null
+        )
+
     }
 
     fun listAllProblems(): ApiResponse<List<ProblemDto>> {
-        return try {
-            val savedProblems = problemRepository.findAll()
-            savedProblems.forEach {
-                it.pdf = s3Service.generatePresignedUrl(it.pdf)
-            }
 
-
-
-            ResponseUtil.success(
-                message = "List of Problems retrieved successfully",
-                data = mapProblemListEntityToProblemListDTO(savedProblems),
-                metadata = null
-            )
-        } catch (e: Exception) {
-            logger.error("An unexpected error occurred: ${e.message}")
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = emptyList()
-            )
+        val savedProblems = problemRepository.findAll()
+        savedProblems.forEach {
+            it.pdf = s3Service.generatePresignedUrl(it.pdf)
         }
+
+
+
+        return ResponseUtil.success(
+            message = "List of Problems retrieved successfully",
+            data = mapProblemListEntityToProblemListDTO(savedProblems),
+            metadata = null
+        )
+
     }
 
     fun getProblemById(id: Long): ApiResponse<ProblemDto> {
-        return try {
-            val savedProblem = problemRepository.findByIdOrNull(id)
-                ?: throw ProblemNotFoundException("Problem not found")
 
-            savedProblem.pdf = s3Service.generatePresignedUrl(savedProblem.pdf)
+        val savedProblem = problemRepository.findByIdOrNull(id)
+            ?: throw ProblemNotFoundException("Problem not found")
 
-            ResponseUtil.success(
-                message = "Problem retrieved successfully",
-                data = savedProblem.toProblemDTO(),
-                metadata = null
-            )
-        } catch (e: Exception) {
-            logger.error("An unexpected error occurred: ${e.message}")
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = ProblemDto()
-            )
-        }
+        savedProblem.pdf = s3Service.generatePresignedUrl(savedProblem.pdf)
+
+        return ResponseUtil.success(
+            message = "Problem retrieved successfully",
+            data = savedProblem.toProblemDTO(),
+            metadata = null
+        )
+
     }
+
     fun updateProblem(
         id: Long,
         problemRequest: ProblemRequest
     ): ApiResponse<ProblemDto> {
-        return try {
-            val problem = problemRepository.findByIdOrNull(id)
-                ?: return ResponseUtil.notFound("Problem not found", ProblemDto())
 
-            problem.title = problemRequest.title
-            problem.difficulty = problemRequest.difficulty
+        val problem = problemRepository.findByIdOrNull(id)
+            ?: return ResponseUtil.notFound("Problem not found", ProblemDto())
 
-            if (!problemRequest.pdf.isEmpty) {
-                val newPdfKey = s3Service.savePdfToS3(problemRequest.pdf)
-                problem.pdf = newPdfKey
-            }
+        problem.title = problemRequest.title
+        problem.difficulty = problemRequest.difficulty
 
-            val updatedProblem = problemRepository.save(problem)
-            updatedProblem.pdf = s3Service.generatePresignedUrl(updatedProblem.pdf)
-
-
-
-            ResponseUtil.success(
-                message = "Problem updated successfully",
-                data = updatedProblem.toProblemDTO(),
-                metadata = null
-            )
-        } catch (e: Exception) {
-            logger.error("An unexpected error occurred while updating problem", e)
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = ProblemDto()
-            )
+        if (!problemRequest.pdf.isEmpty) {
+            val newPdfKey = s3Service.savePdfToS3(problemRequest.pdf)
+            problem.pdf = newPdfKey
         }
+
+        val updatedProblem = problemRepository.save(problem)
+        updatedProblem.pdf = s3Service.generatePresignedUrl(updatedProblem.pdf)
+
+
+
+        return ResponseUtil.success(
+            message = "Problem updated successfully",
+            data = updatedProblem.toProblemDTO(),
+            metadata = null
+        )
+
     }
 
 
     fun deleteProblem(id: Long): ApiResponse<Unit> {
-        return try {
-            val problem = problemRepository.findByIdOrNull(id)
-                ?: return ResponseUtil.notFound(
-                    message = "Problem not found",
-                    data = Unit
-                )
 
-            problemRepository.delete(problem)
-
-            ResponseUtil.success(
-                message = "Problem deleted successfully",
-                data = Unit,
-                metadata = null
-            )
-        } catch (e: Exception) {
-            logger.error("An unexpected error occurred while deleting problem", e)
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
+        val problem = problemRepository.findByIdOrNull(id)
+            ?: return ResponseUtil.notFound(
+                message = "Problem not found",
                 data = Unit
             )
-        }
+
+        problemRepository.delete(problem)
+
+        return ResponseUtil.success(
+            message = "Problem deleted successfully",
+            data = Unit,
+            metadata = null
+        )
+
     }
 }

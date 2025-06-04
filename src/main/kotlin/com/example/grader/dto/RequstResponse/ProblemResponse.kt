@@ -1,12 +1,17 @@
 package com.example.grader.dto.RequstResponse
 
+import com.example.grader.entity.Difficulty
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
+import org.springframework.web.multipart.MultipartFile
 
-data class SubmissionRequest (
+class ProblemResponse (
+    val id: Long? = null,
     @field:NotNull @field:NotEmpty @field:NotBlank
-    val code : String,
+    val title: String,
     @field:NotNull @field:NotEmpty @field:NotBlank
-    val language: String,
+    val difficulty: Difficulty,
+    @field:NotNull @field:NotEmpty @field:NotBlank
+    val pdf: MultipartFile
 )

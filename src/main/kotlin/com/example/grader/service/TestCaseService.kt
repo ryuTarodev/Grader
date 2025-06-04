@@ -25,150 +25,91 @@ class TestCaseService(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     fun createTestCase(testCaseRequest: TestCaseRequest, problemId: Long): ApiResponse<TestCaseDto> {
-        return try {
-            val problem = problemRepository.findById(problemId).orElseThrow {
-                ProblemNotFoundException("No Problem found with ID $problemId")
-            }
 
-            val testCase = TestCase(
-                problem = problem,
-                input = testCaseRequest.input,
-                output = testCaseRequest.output,
-                type = testCaseRequest.type
-            )
-
-            val savedTestCase = testCaseRepository.save(testCase)
-
-            ResponseUtil.created(
-                message = "Added TestCase successfully",
-                data = savedTestCase.toTestCaseDTO(),
-                metadata = null
-            )
-        } catch (e: ProblemNotFoundException) {
-            logger.error("ProblemNotFound: ${e.message}")
-            ResponseUtil.notFound(
-                message = "Invalid request: ${e.message}",
-                data = TestCaseDto()
-            )
-        } catch (e: Exception) {
-            logger.error("Unexpected error: ${e.message}")
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = TestCaseDto()
-            )
+        val problem = problemRepository.findById(problemId).orElseThrow {
+            ProblemNotFoundException("No Problem found with ID $problemId")
         }
+
+        val testCase = TestCase(
+            problem = problem,
+            input = testCaseRequest.input,
+            output = testCaseRequest.output,
+            type = testCaseRequest.type
+        )
+
+        val savedTestCase = testCaseRepository.save(testCase)
+
+        return ResponseUtil.created(
+            message = "Added TestCase successfully",
+            data = savedTestCase.toTestCaseDTO(),
+            metadata = null
+        )
+
     }
 
     fun getTestCasesByProblemId(problemId: Long): ApiResponse<List<TestCaseDto>> {
-        return try {
-            val testCaseList = testCaseRepository.findByProblemId(problemId) ?: throw TestCaseNotFoundException("No TestCase found with ID $problemId")
-            val testCaseListDto = mapTestCaseListEntityToTestCaseListDTO(testCaseList)
 
-            ResponseUtil.success(
-                message = "Fetched all TestCases successfully",
-                data = testCaseListDto,
-                metadata = null
-            )
-        } catch (e: Exception) {
-            logger.error("Unexpected error: ${e.message}")
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = emptyList()
-            )
-        }
+        val testCaseList = testCaseRepository.findByProblemId(problemId)
+            ?: throw TestCaseNotFoundException("No TestCase found with ID $problemId")
+        val testCaseListDto = mapTestCaseListEntityToTestCaseListDTO(testCaseList)
+
+        return ResponseUtil.success(
+            message = "Fetched all TestCases successfully",
+            data = testCaseListDto,
+            metadata = null
+        )
+
     }
 
     fun getTestCaseById(id: Long): ApiResponse<TestCaseDto> {
-        return try {
-            val testCase = testCaseRepository.findByIdOrNull(id)
-                ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
 
-            ResponseUtil.success(
-                message = "Fetched TestCase successfully",
-                data = testCase.toTestCaseDTO(),
-                metadata = null
-            )
-        } catch (e: TestCaseNotFoundException) {
-            logger.error("TestCaseNotFound: ${e.message}")
-            ResponseUtil.notFound(
-                message = "Invalid request: ${e.message}",
-                data = TestCaseDto()
-            )
-        } catch (e: Exception) {
-            logger.error("Unexpected error: ${e.message}")
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = TestCaseDto()
-            )
-        }
+        val testCase = testCaseRepository.findByIdOrNull(id)
+            ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
+
+        return ResponseUtil.success(
+            message = "Fetched TestCase successfully",
+            data = testCase.toTestCaseDTO(),
+            metadata = null
+        )
+
     }
 
     fun updateTestCase(id: Long, testCaseRequest: TestCaseRequest, problemId: Long): ApiResponse<TestCaseDto> {
-        return try {
-            val existingTestCase = testCaseRepository.findByIdOrNull(id)
-                ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
 
-            val problem = problemRepository.findByIdOrNull(problemId)
-                ?: throw ProblemNotFoundException("No Problem found with ID $problemId")
+        val existingTestCase = testCaseRepository.findByIdOrNull(id)
+            ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
 
-            existingTestCase.problem = problem
-            existingTestCase.input = testCaseRequest.input
-            existingTestCase.output = testCaseRequest.output
-            existingTestCase.type = testCaseRequest.type
-            existingTestCase.updatedAt = Instant.now()
+        val problem = problemRepository.findByIdOrNull(problemId)
+            ?: throw ProblemNotFoundException("No Problem found with ID $problemId")
 
-            val savedTestCase = testCaseRepository.save(existingTestCase)
+        existingTestCase.problem = problem
+        existingTestCase.input = testCaseRequest.input
+        existingTestCase.output = testCaseRequest.output
+        existingTestCase.type = testCaseRequest.type
+        existingTestCase.updatedAt = Instant.now()
 
-            ResponseUtil.success(
-                message = "Updated TestCase successfully",
-                data = savedTestCase.toTestCaseDTO(),
-                metadata = null
-            )
-        } catch (e: TestCaseNotFoundException) {
-            logger.error("TestCaseNotFound: ${e.message}")
-            ResponseUtil.notFound(
-                message = "Invalid request: ${e.message}",
-                data = TestCaseDto()
-            )
-        } catch (e: ProblemNotFoundException) {
-            logger.error("ProblemNotFound: ${e.message}")
-            ResponseUtil.notFound(
-                message = "Invalid request: ${e.message}",
-                data = TestCaseDto()
-            )
-        } catch (e: Exception) {
-            logger.error("Unexpected error: ${e.message}")
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = TestCaseDto()
-            )
-        }
+        val savedTestCase = testCaseRepository.save(existingTestCase)
+
+        return ResponseUtil.success(
+            message = "Updated TestCase successfully",
+            data = savedTestCase.toTestCaseDTO(),
+            metadata = null
+        )
+
     }
 
     fun deleteTestCase(id: Long): ApiResponse<Unit> {
-        return try {
-            val testCase = testCaseRepository.findByIdOrNull(id)
-                ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
 
-            testCaseRepository.delete(testCase)
+        val testCase = testCaseRepository.findByIdOrNull(id)
+            ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
 
-            ResponseUtil.success(
-                message = "Deleted TestCase successfully",
-                data = Unit,
-                metadata = null
-            )
-        } catch (e: TestCaseNotFoundException) {
-            logger.error("TestCaseNotFound: ${e.message}")
-            ResponseUtil.notFound(
-                message = "Invalid request: ${e.message}",
-                data = Unit
-            )
-        } catch (e: Exception) {
-            logger.error("Unexpected error: ${e.message}")
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = Unit
-            )
-        }
+        testCaseRepository.delete(testCase)
+
+        return ResponseUtil.success(
+            message = "Deleted TestCase successfully",
+            data = Unit,
+            metadata = null
+        )
+
     }
 }

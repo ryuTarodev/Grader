@@ -1,6 +1,7 @@
 package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
+import com.example.grader.dto.ProblemTagDto
 import com.example.grader.entity.ProblemTag
 import com.example.grader.service.ProblemTagService
 import org.springframework.http.ResponseEntity
@@ -17,7 +18,7 @@ class ProblemTagController(
     fun createProblemTag(
         @PathVariable problemId: Long,
         @PathVariable tagId: Long
-    ): ResponseEntity<ApiResponse<ProblemTag>> {
+    ): ResponseEntity<ApiResponse<ProblemTagDto>> {
         val response = problemTagService.createProblemTag(problemId, tagId)
         return ResponseEntity.ok(response)
     }
@@ -26,7 +27,7 @@ class ProblemTagController(
     @GetMapping("/problems/{problemId}")
     fun getProblemTagsByProblemId(
         @PathVariable problemId: Long
-    ): ResponseEntity<ApiResponse<List<ProblemTag>>> {
+    ): ResponseEntity<ApiResponse<List<ProblemTagDto>>> {
         val response = problemTagService.getProblemTagsByProblemId(problemId)
         return ResponseEntity.ok(response)
     }
@@ -35,7 +36,7 @@ class ProblemTagController(
     @GetMapping("/tags/{tagId}")
     fun getProblemTagsByTagId(
         @PathVariable tagId: Long
-    ): ResponseEntity<ApiResponse<List<ProblemTag>>> {
+    ): ResponseEntity<ApiResponse<List<ProblemTagDto>>> {
         val response = problemTagService.getProblemTagsByTagId(tagId)
         return ResponseEntity.ok(response)
     }
@@ -46,7 +47,7 @@ class ProblemTagController(
         @PathVariable id: Long,
         @RequestParam newProblemId: Long,
         @RequestParam newTagId: Long
-    ): ResponseEntity<ApiResponse<ProblemTag>> {
+    ): ResponseEntity<ApiResponse<ProblemTagDto>> {
         val response = problemTagService.updateProblemTag(id, newProblemId, newTagId)
         return ResponseEntity.ok(response)
     }
@@ -57,6 +58,14 @@ class ProblemTagController(
         @PathVariable id: Long
     ): ResponseEntity<ApiResponse<Unit>> {
         val response = problemTagService.deleteProblemTag(id)
+        return ResponseEntity.ok(response)
+    }
+    @DeleteMapping("/problems/{problemId}/tags/{tagId}")
+    fun deleteProblemTag(
+        @PathVariable problemId: Long,
+        @PathVariable tagId: Long
+    ): ResponseEntity<ApiResponse<Unit>> {
+        val response = problemTagService.deleteProblemTagByProblemIdAndTagId(problemId, tagId)
         return ResponseEntity.ok(response)
     }
 }

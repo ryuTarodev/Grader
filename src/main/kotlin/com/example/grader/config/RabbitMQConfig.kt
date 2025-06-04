@@ -14,9 +14,6 @@ class RabbitMQConfig {
     @Value("\${rabbitmq.queue.name}")
     private lateinit var submissionQueueName: String
 
-    @Value("\${rabbitmq.queue.result}")
-    private lateinit var resultQueueName: String
-
     @Value("\${rabbitmq.exchange.name}")
     private lateinit var exchangeName: String
 
@@ -27,29 +24,15 @@ class RabbitMQConfig {
     @Bean
     fun submissionQueue(): Queue = Queue(submissionQueueName, false)
 
-
-    @Bean
-    fun resultQueue(): Queue = Queue(resultQueueName, false)
-
-
     @Bean
     fun exchange(): TopicExchange = TopicExchange(exchangeName)
 
-    // ✅ Binding submissionQueue to exchange with submissionRoutingKey
     @Bean
     fun submissionBinding(): Binding {
         return BindingBuilder.bind(submissionQueue())
             .to(exchange())
             .with(submissionRoutingKey)
     }
-
-    // ❌ Optional: If your resultQueue needs routing, you can also bind it here
-    // @Bean
-    // fun resultBinding(): Binding {
-    //     return BindingBuilder.bind(resultQueue())
-    //         .to(exchange())
-    //         .with("resultRoutingKey")
-    // }
 
     @Bean
     fun messageConverter(): Jackson2JsonMessageConverter = Jackson2JsonMessageConverter()

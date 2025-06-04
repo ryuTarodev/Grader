@@ -12,10 +12,10 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class AwsS3Config {
 
-    @Value("\${spring.cloud.credentials.access-key}")
+    @Value("\${spring.cloud.aws.credentials.access-key}")
     lateinit var awsAccessKeyId: String
 
-    @Value("\${spring.cloud.credentials.secret-key}")
+    @Value("\${spring.cloud.aws.credentials.secret-key}")
     lateinit var awsSecretAccessKey: String
 
     @Value("\${spring.cloud.aws.s3.region}")

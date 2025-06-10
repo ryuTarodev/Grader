@@ -1,7 +1,6 @@
 package com.example.grader.service
 
 import com.example.grader.dto.ApiResponse
-import com.example.grader.dto.ProblemTagDto
 import com.example.grader.dto.RequstResponse.SubmissionRequest
 import com.example.grader.dto.SubmissionDto
 import com.example.grader.dto.SubmissionSendMessage
@@ -64,28 +63,34 @@ class SubmissionService(
         )
     }
 
-    fun updateSubmission(submissionId: Long, score: Float = 0f): ApiResponse<SubmissionDto> {
+    @Transactional
+    fun updateSubmissionFields(submissionId: Long, request: SubmissionRequest): ApiResponse<SubmissionDto> {
+        val submission = submissionRepository.findByIdOrNull(submissionId)
+            ?: throw SubmissionNotFoundException("Submission $submissionId not found")
 
-        val existingSubmission = submissionRepository.findByIdOrNull(submissionId)
-            ?: throw SubmissionNotFoundException("No submission found with ID $submissionId")
+        submission.code = request.code
+        submission.language = request.language
 
-        existingSubmission.score = score
-        existingSubmission.status = Status.ACCEPTED
-        val savedSubmission = submissionRepository.save(existingSubmission)
-        val submissionDto = savedSubmission.toSubmissionDTO()
+        val updated = submissionRepository.save(submission)
+        return ResponseUtil.success("Submission updated", updated.toSubmissionDTO(), metadata = null)
+    }
 
-        return ResponseUtil.success(
-            message = "Submission updated successfully.",
-            data = submissionDto,
-            metadata = null
-        )
+    @Transactional
+    fun updateSubmissionResult(submissionId: Long, score: Float): ApiResponse<SubmissionDto> {
+        val submission = submissionRepository.findByIdOrNull(submissionId)
+            ?: throw SubmissionNotFoundException("Submission $submissionId not found")
 
+        submission.score = score
+        submission.status = if (score <= 0f) Status.REJECTED else Status.ACCEPTED
+
+        val updated = submissionRepository.save(submission)
+        return ResponseUtil.success("Submission result updated", updated.toSubmissionDTO(), metadata = null)
     }
 
     fun getSubmissionByProblemIdAndAppUserId(problemId: Long, appUserId: Long): ApiResponse<List<SubmissionDto>> {
-
         val submissions = submissionRepository.findAllByProblemIdAndAppUserId(problemId, appUserId)
             ?: throw SubmissionNotFoundException("Submission not found")
+
         val submissionDtoList = mapSubmissionListEntityToSubmissionListDTO(submissions)
 
         return ResponseUtil.success(
@@ -93,18 +98,16 @@ class SubmissionService(
             data = submissionDtoList,
             metadata = null
         )
-
     }
 
     @Transactional
     fun deleteAllSubmissions(problemId: Long, appUserId: Long): ApiResponse<Unit> {
-
         submissionRepository.deleteAllByProblemIdAndAppUserId(problemId, appUserId)
+
         return ResponseUtil.success(
             message = "Remove Successfully",
             data = Unit,
             metadata = null
         )
-
     }
 }

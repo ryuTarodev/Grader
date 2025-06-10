@@ -11,21 +11,43 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/submissions")
 class SubmissionController(private val submissionService: SubmissionService) {
 
-
     @PostMapping("/problems/{problemId}/user/{appUserId}")
     fun sendSubmission(
         @PathVariable problemId: Long,
         @PathVariable appUserId: Long,
         @RequestBody submissionRequest: SubmissionRequest
     ): ResponseEntity<ApiResponse<SubmissionDto>> {
-        val response = submissionService.createSubmission(problemId, appUserId, submissionRequest.code, submissionRequest.language)
+        val response = submissionService.createSubmission(
+            problemId,
+            appUserId,
+            submissionRequest.code,
+            submissionRequest.language
+        )
+        return ResponseEntity.status(response.statusCode).body(response)
+    }
+
+    @PutMapping("/{submissionId}")
+    fun updateSubmissionFields(
+        @PathVariable submissionId: Long,
+        @RequestBody request: SubmissionRequest
+    ): ResponseEntity<ApiResponse<SubmissionDto>> {
+        val response = submissionService.updateSubmissionFields(submissionId, request)
+        return ResponseEntity.status(response.statusCode).body(response)
+    }
+
+    @PutMapping("/{submissionId}/result")
+    fun updateSubmissionResult(
+        @PathVariable submissionId: Long,
+        @RequestParam score: Float
+    ): ResponseEntity<ApiResponse<SubmissionDto>> {
+        val response = submissionService.updateSubmissionResult(submissionId, score)
         return ResponseEntity.status(response.statusCode).body(response)
     }
 
     @GetMapping("/problems/{problemId}/user/{appUserId}")
     fun getSubmissions(
         @PathVariable problemId: Long,
-        @PathVariable appUserId: Long,
+        @PathVariable appUserId: Long
     ): ApiResponse<List<SubmissionDto>> {
         return submissionService.getSubmissionByProblemIdAndAppUserId(problemId, appUserId)
     }
@@ -33,9 +55,8 @@ class SubmissionController(private val submissionService: SubmissionService) {
     @DeleteMapping("/problems/{problemId}/user/{appUserId}")
     fun clearAllSubmissions(
         @PathVariable problemId: Long,
-        @PathVariable appUserId: Long): ApiResponse<Unit> {
+        @PathVariable appUserId: Long
+    ): ApiResponse<Unit> {
         return submissionService.deleteAllSubmissions(problemId, appUserId)
     }
-
-
 }

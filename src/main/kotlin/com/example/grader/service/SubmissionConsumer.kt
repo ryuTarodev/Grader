@@ -20,7 +20,7 @@ class SubmissionConsumer(
 
     fun finishSubmission(submissionId: Long, correctTestCases: Long) {
         try {
-            submissionService.updateSubmission(submissionId = submissionId, score = correctTestCases.toFloat() * 4)
+            submissionService.updateSubmissionResult(submissionId = submissionId, score = correctTestCases.toFloat() * 4)
             logger.info("✅ Successfully updated submission with ID $submissionId")
         } catch (e: Exception) {
             logger.error("❌ Failed to update submission $submissionId", e)

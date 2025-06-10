@@ -42,7 +42,7 @@ class TagController(
     }
 
     @DeleteMapping("/{id}")
-    fun deleteTag(@PathVariable id: Long): ResponseEntity<ApiResponse<TagDto>> {
+    fun deleteTag(@PathVariable id: Long): ResponseEntity<ApiResponse<Unit>> {
         val response = tagService.deleteTagById(id)
         return ResponseEntity.ok(response)
     }

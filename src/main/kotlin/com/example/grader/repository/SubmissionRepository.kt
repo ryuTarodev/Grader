@@ -6,8 +6,9 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 
 interface SubmissionRepository : JpaRepository<Submission, Long> {
-    @Modifying
-    @Query("DELETE FROM Submission s WHERE s.problem.id = :problemId AND s.appUser.id = :appUserId")
-    fun deleteAllByProblemIdAndAppUserId(problemId: Long, appUserId: Long): Int
-    fun findAllByProblemIdAndAppUserId(appUserId: Long, problemId: Long): List<Submission>?
+    fun findAllByProblemIdAndAppUserId(problemId: Long, appUserId: Long): List<Submission>
+    fun findAllByAppUserId(appUserId: Long): List<Submission>
+    fun findAllByProblemId(problemId: Long): List<Submission>
+    fun countByProblemIdAndAppUserId(problemId: Long, appUserId: Long): Long
+    fun deleteAllByProblemIdAndAppUserId(problemId: Long, appUserId: Long)
 }

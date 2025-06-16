@@ -1,20 +1,20 @@
 package com.example.grader.service
 
-import com.example.grader.dto.ApiResponse
 import com.example.grader.dto.TestCaseDto
-import com.example.grader.dto.RequstResponse.TestCaseRequest
+import com.example.grader.dto.RequesttResponse.TestCaseRequest
+import com.example.grader.entity.Problem
 import com.example.grader.entity.TestCase
+import com.example.grader.error.BadRequestException
 import com.example.grader.error.ProblemNotFoundException
 import com.example.grader.error.TestCaseNotFoundException
 import com.example.grader.repository.ProblemRepository
 import com.example.grader.repository.TestCaseRepository
-import com.example.grader.util.ResponseUtil
 import com.example.grader.util.mapTestCaseListEntityToTestCaseListDTO
 import com.example.grader.util.toTestCaseDTO
-import jdk.incubator.vector.VectorOperators.Test
 import org.slf4j.LoggerFactory
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 
 @Service
@@ -24,92 +24,93 @@ class TestCaseService(
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun createTestCase(testCaseRequest: TestCaseRequest, problemId: Long): ApiResponse<TestCaseDto> {
-
-        val problem = problemRepository.findById(problemId).orElseThrow {
-            ProblemNotFoundException("No Problem found with ID $problemId")
-        }
+    fun createTestCase(testCaseRequest: TestCaseRequest, problemId: Long): TestCaseDto {
+        validateTestCaseRequest(testCaseRequest)
+        val problem = findProblemById(problemId)
 
         val testCase = TestCase(
             problem = problem,
-            input = testCaseRequest.input,
-            output = testCaseRequest.output,
+            input = testCaseRequest.input.trim(),
+            output = testCaseRequest.output.trim(),
             type = testCaseRequest.type
         )
 
         val savedTestCase = testCaseRepository.save(testCase)
 
-        return ResponseUtil.created(
-            message = "Added TestCase successfully",
-            data = savedTestCase.toTestCaseDTO(),
-            metadata = null
-        )
+        logger.info("Created test case with ID: ${savedTestCase.id} for problem ID: $problemId")
 
+        return savedTestCase.toTestCaseDTO()
     }
 
-    fun getTestCasesByProblemId(problemId: Long): ApiResponse<List<TestCaseDto>> {
 
-        val testCaseList = testCaseRepository.findByProblemId(problemId)
-            ?: throw TestCaseNotFoundException("No TestCase found with ID $problemId")
-        val testCaseListDto = mapTestCaseListEntityToTestCaseListDTO(testCaseList)
+    fun getTestCasesByProblemId(problemId: Long): List<TestCaseDto> {
+        // Verify problem exists first
+        findProblemById(problemId)
 
-        return ResponseUtil.success(
-            message = "Fetched all TestCases successfully",
-            data = testCaseListDto,
-            metadata = null
-        )
+        val testCases = testCaseRepository.findByProblemId(problemId)
 
+        return mapTestCaseListEntityToTestCaseListDTO(testCases)
     }
 
-    fun getTestCaseById(id: Long): ApiResponse<TestCaseDto> {
+    fun getTestCaseById(id: Long): TestCaseDto {
+        val testCase = findTestCaseById(id)
 
-        val testCase = testCaseRepository.findByIdOrNull(id)
-            ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
-
-        return ResponseUtil.success(
-            message = "Fetched TestCase successfully",
-            data = testCase.toTestCaseDTO(),
-            metadata = null
-        )
-
+        return testCase.toTestCaseDTO()
     }
 
-    fun updateTestCase(id: Long, testCaseRequest: TestCaseRequest, problemId: Long): ApiResponse<TestCaseDto> {
+    fun updateTestCase(id: Long, problemId: Long, testCaseRequest: TestCaseRequest): TestCaseDto {
+        validateTestCaseRequest(testCaseRequest)
 
-        val existingTestCase = testCaseRepository.findByIdOrNull(id)
-            ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
+        val existingTestCase = findTestCaseById(id)
+        val problem = findProblemById(problemId)
 
-        val problem = problemRepository.findByIdOrNull(problemId)
-            ?: throw ProblemNotFoundException("No Problem found with ID $problemId")
-
-        existingTestCase.problem = problem
-        existingTestCase.input = testCaseRequest.input
-        existingTestCase.output = testCaseRequest.output
-        existingTestCase.type = testCaseRequest.type
-        existingTestCase.updatedAt = Instant.now()
+        existingTestCase.apply {
+            this.problem = problem
+            input = testCaseRequest.input.trim()
+            output = testCaseRequest.output.trim()
+            type = testCaseRequest.type
+            updatedAt = Instant.now()
+        }
 
         val savedTestCase = testCaseRepository.save(existingTestCase)
 
-        return ResponseUtil.success(
-            message = "Updated TestCase successfully",
-            data = savedTestCase.toTestCaseDTO(),
-            metadata = null
-        )
+        logger.info("Updated test case with ID: $id")
 
+        return savedTestCase.toTestCaseDTO()
     }
 
-    fun deleteTestCase(id: Long): ApiResponse<Unit> {
-
-        val testCase = testCaseRepository.findByIdOrNull(id)
-            ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
+    @Transactional
+    fun deleteTestCase(id: Long) {
+        val testCase = findTestCaseById(id)
 
         testCaseRepository.delete(testCase)
 
-        return ResponseUtil.success(
-            message = "Deleted TestCase successfully",
-            data = Unit,
-            metadata = null
-        )
+        logger.info("Deleted test case with ID: $id")
+    }
 
+    private fun validateTestCaseRequest(request: TestCaseRequest) {
+        when {
+            request.input.isBlank() -> throw BadRequestException("Test case input cannot be blank")
+            request.output.isBlank() -> throw BadRequestException("Test case output cannot be blank")
+            request.input.length > MAX_INPUT_LENGTH ->
+                throw BadRequestException("Test case input cannot exceed $MAX_INPUT_LENGTH characters")
+            request.output.length > MAX_OUTPUT_LENGTH ->
+                throw BadRequestException("Test case output cannot exceed $MAX_OUTPUT_LENGTH characters")
+        }
+    }
+
+    private fun findProblemById(problemId: Long): Problem {
+        return problemRepository.findByIdOrNull(problemId)
+            ?: throw ProblemNotFoundException("No Problem found with ID $problemId")
+    }
+
+    private fun findTestCaseById(id: Long): TestCase {
+        return testCaseRepository.findByIdOrNull(id)
+            ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
+    }
+
+    companion object {
+        private const val MAX_INPUT_LENGTH = 10000 // Adjust as needed
+        private const val MAX_OUTPUT_LENGTH = 10000 // Adjust as needed
     }
 }

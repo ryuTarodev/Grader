@@ -1,9 +1,11 @@
 package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
-import com.example.grader.dto.RequstResponse.TestCaseRequest
+import com.example.grader.dto.RequesttResponse.TestCaseRequest
 import com.example.grader.dto.TestCaseDto
 import com.example.grader.service.TestCaseService
+import com.example.grader.util.ResponseUtil
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -14,19 +16,22 @@ class TestCaseController(private val testCaseService: TestCaseService) {
     @PostMapping("")
     fun addNewTestCase(@PathVariable problemId: Long,
                        @RequestBody testCaseRequest: TestCaseRequest): ResponseEntity<ApiResponse<TestCaseDto>> {
-        val response: ApiResponse<TestCaseDto> = testCaseService.createTestCase(testCaseRequest, problemId)
-        return ResponseEntity.ok(response)
+        val testCase = testCaseService.createTestCase(testCaseRequest, problemId)
+        val response = ResponseUtil.created("TestCase created successfully", testCase, null)
+        return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
     @GetMapping("")
     fun getTestCases(@PathVariable problemId: Long): ResponseEntity<ApiResponse<List<TestCaseDto>>> {
-        val response = testCaseService.getTestCasesByProblemId(problemId)
+        val testCases = testCaseService.getTestCasesByProblemId(problemId)
+        val response = ResponseUtil.success("TestCase found successfully", testCases, null)
         return ResponseEntity.ok(response)
     }
     @GetMapping("/{id}")
     fun getTestCaseById(@PathVariable problemId: Long,
                         @PathVariable id: Long): ResponseEntity<ApiResponse<TestCaseDto>> {
-        val response = testCaseService.getTestCaseById(id)
+        val testCase = testCaseService.getTestCaseById(id)
+        val response = ResponseUtil.success("TestCase found successfully", testCase, null)
         return ResponseEntity.ok(response)
     }
 
@@ -34,14 +39,16 @@ class TestCaseController(private val testCaseService: TestCaseService) {
     fun updateTestCase(@PathVariable id: Long,
                        @PathVariable problemId: Long,
                        @RequestBody testCaseRequest: TestCaseRequest): ResponseEntity<ApiResponse<TestCaseDto>> {
-        val response: ApiResponse<TestCaseDto> = testCaseService.updateTestCase(id, testCaseRequest, problemId)
+        val testCase: TestCaseDto = testCaseService.updateTestCase(id,problemId, testCaseRequest)
+        val response = ResponseUtil.success("TestCase updated successfully", testCase, null)
         return ResponseEntity.ok(response)
     }
 
     @DeleteMapping("/{id}")
     fun deleteTestCase(@PathVariable problemId: Long,
                        @PathVariable id: Long): ResponseEntity<ApiResponse<Unit>> {
-        val response: ApiResponse<Unit> = testCaseService.deleteTestCase(id)
+        val testCase = testCaseService.deleteTestCase(id)
+        val response = ResponseUtil.success("TestCase deleted successfully", testCase, null)
         return ResponseEntity.ok(response)
     }
 }

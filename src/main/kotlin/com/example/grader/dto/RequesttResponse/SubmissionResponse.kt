@@ -1,4 +1,4 @@
-package com.example.grader.dto.RequstResponse
+package com.example.grader.dto.RequesttResponse
 
 import com.example.grader.entity.Status
 import java.time.Instant

@@ -1,107 +1,188 @@
 package com.example.grader.service
 
-import com.example.grader.dto.ApiResponse
-import com.example.grader.dto.RequstResponse.SubmissionRequest
+import com.example.grader.dto.RequesttResponse.SubmissionRequest
 import com.example.grader.dto.SubmissionDto
 import com.example.grader.dto.SubmissionSendMessage
 import com.example.grader.entity.*
+import com.example.grader.error.*
 import com.example.grader.repository.*
-import com.example.grader.util.ResponseUtil
+import com.example.grader.util.mapSubmissionListEntityToSubmissionListDTO
+import com.example.grader.util.mapTestCaseListEntityToTestCaseListDTO
+import io.mockk.*
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
-import org.mockito.Mock
-import org.mockito.Mockito.*
-import org.mockito.junit.jupiter.MockitoExtension
-import java.util.*
+import org.springframework.data.repository.findByIdOrNull
 
-@ExtendWith(MockitoExtension::class)
 class SubmissionServiceTest {
 
-    @Mock lateinit var problemRepository: ProblemRepository
-    @Mock lateinit var appUserRepository: AppUserRepository
-    @Mock lateinit var submissionRepository: SubmissionRepository
-    @Mock lateinit var testCaseRepository: TestCaseRepository
-    @Mock lateinit var submissionProducer: SubmissionProducer
+    private val problemRepository = mockk<ProblemRepository>()
+    private val appUserRepository = mockk<AppUserRepository>()
+    private val submissionRepository = mockk<SubmissionRepository>(relaxed = true)
+    private val testCaseRepository = mockk<TestCaseRepository>()
+    private val submissionProducer = mockk<SubmissionProducer>(relaxed = true)
 
-    @InjectMocks
-    lateinit var submissionService: SubmissionService
+    private lateinit var submissionService: SubmissionService
 
-    private lateinit var user: AppUser
-    private lateinit var problem: Problem
-    private lateinit var testCase: TestCase
-    private lateinit var submission: Submission
+    private val user = AppUser(id = 1, appUsername = "John")
+    private val problem = Problem(id = 1, title = "FizzBuzz")
+    private val testCases = listOf(TestCase(id = 1, input = "1", output = "1", problem = problem))
+    private val submissionRequest = SubmissionRequest(code = "print(1)", language = "Python")
 
     @BeforeEach
     fun setUp() {
-        user = AppUser(id = 1L, appUsername = "john", clientPassword  = "pass")
-        problem = Problem(id = 1L, title = "Test Problem", difficulty = Difficulty.EASY)
-        testCase = TestCase(id = 1L, input = "1 2", output = "3", problem = problem)
-
-        submission = Submission(
-            id = 1L,
-            code = "print()",
-            language = "python",
-            appUser = user,
-            problem = problem
+        submissionService = SubmissionService(
+            problemRepository,
+            appUserRepository,
+            submissionRepository,
+            testCaseRepository,
+            submissionProducer
         )
     }
 
     @Test
-    fun `createSubmission should save and send submission`() {
-        `when`(appUserRepository.findById(1L)).thenReturn(Optional.of(user))
-        `when`(problemRepository.findById(1L)).thenReturn(Optional.of(problem))
-        `when`(testCaseRepository.findByProblemId(1L)).thenReturn(listOf(testCase))
-        `when`(submissionRepository.save(any<Submission>() ?: submission)).thenReturn(submission)
+    fun `createSubmission should save and send to RabbitMQ`() {
+        every { appUserRepository.findByIdOrNull(1) } returns user
+        every { problemRepository.findByIdOrNull(1) } returns problem
+        every { testCaseRepository.findByProblemId(1) } returns testCases
+        every { submissionRepository.save(any()) } answers { firstArg() }
 
-        val response = submissionService.createSubmission(1L, 1L, "print()", "python")
+        val result = submissionService.createSubmission(1, 1, submissionRequest)
 
-        assertNotNull(response.data)
-        assertEquals("Submission sent to RabbitMQ.", response.message)
-
-    }
-    @Test
-    fun `getSubmissionByProblemIdAndAppUserId should return list`() {
-        `when`(submissionRepository.findAllByProblemIdAndAppUserId(1L, 1L)).thenReturn(listOf(submission))
-
-        val response = submissionService.getSubmissionByProblemIdAndAppUserId(1L, 1L)
-
-        assertEquals(1, response.data?.size)
-        assertEquals("List all submissions", response.message)
+        assertEquals("Python", result.language)
+        verify { submissionProducer.sendSubmission(any()) }
     }
 
     @Test
-    fun `updateSubmissionFields should update code and language`() {
-        val updatedRequest = SubmissionRequest(code = "updated()", language = "java")
-        `when`(submissionRepository.findById(1L)).thenReturn(Optional.of(submission))
-        `when`(submissionRepository.save(any<Submission>() ?: submission)).thenReturn(submission)
-
-        val response = submissionService.updateSubmissionFields(1L, updatedRequest)
-
-        assertEquals("Submission updated", response.message)
-        assertEquals("java", response.data?.language)
+    fun `createSubmission should throw exception if user not found`() {
+        every { appUserRepository.findByIdOrNull(1) } returns null
+        val ex = assertThrows<UserNotFoundException> {
+            submissionService.createSubmission(1, 1, submissionRequest)
+        }
+        assertTrue(ex.message!!.contains("User not found"))
     }
 
     @Test
-    fun `updateSubmissionResult should set status ACCEPTED if score positive`() {
-        `when`(submissionRepository.findById(1L)).thenReturn(Optional.of(submission))
-        `when`(submissionRepository.save(any<Submission>() ?: submission)).thenReturn(submission)
+    fun `createSubmission should throw exception if problem not found`() {
+        every { appUserRepository.findByIdOrNull(1) } returns user
+        every { problemRepository.findByIdOrNull(1) } returns null
 
-        val response = submissionService.updateSubmissionResult(1L, 80f)
-
-        assertEquals("Submission result updated", response.message)
-        assertEquals(Status.ACCEPTED, response.data?.status)
+        val ex = assertThrows<ProblemNotFoundException> {
+            submissionService.createSubmission(1, 1, submissionRequest)
+        }
+        assertTrue(ex.message!!.contains("Problem not found"))
     }
 
+    @Test
+    fun `createSubmission should throw if no test cases`() {
+        every { appUserRepository.findByIdOrNull(1) } returns user
+        every { problemRepository.findByIdOrNull(1) } returns problem
+        every { testCaseRepository.findByProblemId(1) } returns emptyList()
 
+        val ex = assertThrows<TestCaseNotFoundException> {
+            submissionService.createSubmission(1, 1, submissionRequest)
+        }
+        assertTrue(ex.message!!.contains("No test cases"))
+    }
 
     @Test
-    fun `deleteAllSubmissions should return success`() {
-        val response = submissionService.deleteAllSubmissions(1L, 1L)
+    fun `updateSubmissionFields should update submission`() {
+        val submission = Submission(id = 1, appUser =  user, problem =   problem, code = "code", language =  "Python", status =  Status.PENDING )
+        every { submissionRepository.findByIdOrNull(1) } returns submission
+        every { submissionRepository.save(any()) } answers { firstArg() }
 
-        assertEquals("Remove Successfully", response.message)
-        verify(submissionRepository, times(1)).deleteAllByProblemIdAndAppUserId(1L, 1L)
+        val result = submissionService.updateSubmissionFields(1, submissionRequest)
+        assertEquals(Status.PENDING, result.status)
+    }
+
+    @Test
+    fun `updateSubmissionFields should throw if already processed`() {
+        val processedSubmission = Submission(
+            id = 1,
+            appUser = user,
+            problem = problem,
+            code = "code",
+            language = "Python",
+            status = Status.ACCEPTED
+        )
+
+        every { submissionRepository.findByIdOrNull(1) } returns processedSubmission
+        every { submissionRepository.save(any()) } returns processedSubmission
+
+        assertThrows<BadRequestException> {
+            submissionService.updateSubmissionFields(1, submissionRequest)
+        }
+    }
+
+    @Test
+    fun `updateSubmissionResult should update score and status`() {
+        val submission = Submission(id = 1, appUser =  user, problem =   problem, code = "code", language =  "Python", status =  Status.PENDING )
+        every { submissionRepository.findByIdOrNull(1) } returns submission
+        every { submissionRepository.save(any()) } answers { firstArg() }
+
+        val result = submissionService.updateSubmissionResult(1, 100f)
+        assertEquals(Status.ACCEPTED, result.status)
+    }
+
+    @Test
+    fun `updateSubmissionResult should throw if score is invalid`() {
+        assertThrows<BadRequestException> {
+            submissionService.updateSubmissionResult(1, 101f)
+        }
+    }
+
+    @Test
+    fun `getSubmissionsByProblemAndUser should return submissions`() {
+        every { problemRepository.findByIdOrNull(1) } returns problem
+        every { appUserRepository.findByIdOrNull(1) } returns user
+        every { submissionRepository.findAllByProblemIdAndAppUserId(1, 1) } returns listOf()
+
+        val result = submissionService.getSubmissionsByProblemAndUser(1, 1)
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun `getSubmissionById should return submission`() {
+        val submission = Submission(id = 1, appUser =  user, problem =   problem, code = "code", language =  "Python", status =  Status.PENDING )
+        every { submissionRepository.findByIdOrNull(1) } returns submission
+
+        val result = submissionService.getSubmissionById(1)
+        assertEquals("Python", result.language)
+    }
+
+    @Test
+    fun `getSubmissionsByUser should return submissions`() {
+        every { appUserRepository.findByIdOrNull(1) } returns user
+        every { submissionRepository.findAllByAppUserId(1) } returns listOf()
+
+        val result = submissionService.getSubmissionsByUser(1)
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun `getSubmissionsByProblem should return submissions`() {
+        every { problemRepository.findByIdOrNull(1) } returns problem
+        every { submissionRepository.findAllByProblemId(1) } returns listOf()
+
+        val result = submissionService.getSubmissionsByProblem(1)
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun `deleteAllSubmissionsByProblemAndUser should delete submissions`() {
+        every { problemRepository.findByIdOrNull(1) } returns problem
+        every { appUserRepository.findByIdOrNull(1) } returns user
+        every { submissionRepository.countByProblemIdAndAppUserId(1, 1) } returns 2
+        every { submissionRepository.deleteAllByProblemIdAndAppUserId(1, 1) } just Runs
+
+        submissionService.deleteAllSubmissionsByProblemAndUser(1, 1)
+    }
+
+    @Test
+    fun `deleteSubmission should delete by ID`() {
+        val submission = Submission(id = 1, appUser =  user, problem =   problem, code = "code", language =  "Python", status =  Status.PENDING )
+        every { submissionRepository.findByIdOrNull(1) } returns submission
+        every { submissionRepository.delete(any()) } just Runs
+
+        submissionService.deleteSubmission(1)
     }
 }

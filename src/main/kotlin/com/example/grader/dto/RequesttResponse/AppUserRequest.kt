@@ -1,16 +1,17 @@
-package com.example.grader.dto.RequstResponse
+package com.example.grader.dto.RequesttResponse
 
-import com.example.grader.entity.Difficulty
+import com.example.grader.entity.Role
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
-import org.springframework.web.multipart.MultipartFile
 
-class ProblemRequest (
+data class AppUserRequest(
     @field:NotNull @field:NotEmpty @field:NotBlank
-    val title: String,
+    val appUsername: String,
+
     @field:NotNull @field:NotEmpty @field:NotBlank
-    val difficulty: Difficulty,
+    val clientPassword: String,
     @field:NotNull @field:NotEmpty @field:NotBlank
-    val pdf: MultipartFile
+    val role: Role,
+    val profilePicture: String? = null,
 )

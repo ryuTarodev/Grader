@@ -1,9 +1,6 @@
-package com.example.grader.dto.RequstResponse
+package com.example.grader.dto.RequesttResponse
 
 import com.example.grader.entity.Role
-import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.NotEmpty
-import jakarta.validation.constraints.NotNull
 
 data class AppUserResponse(
     val id: Long = 0,

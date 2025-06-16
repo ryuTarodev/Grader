@@ -31,7 +31,7 @@ fun ProblemTag.toProblemTagDTO(): ProblemTagDto {
     return ProblemTagDto(
         id = this.id,
         problemId = this.problem.id,
-        tag = this.tag.toTagDTO()
+        tag = this.tag.id
     )
 }
 fun TestCase.toTestCaseDTO(): TestCaseDto {

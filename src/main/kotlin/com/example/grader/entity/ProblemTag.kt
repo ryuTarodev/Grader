@@ -8,7 +8,7 @@ import java.time.Instant
 data class ProblemTag(
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    val id: Long? = null,
+    var id: Long? = null,
 
     @ManyToOne
     @JoinColumn(name = "problem_id", nullable = false)

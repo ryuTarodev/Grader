@@ -1,7 +1,5 @@
 package com.example.grader.dto
 
-import com.example.grader.entity.Problem
-import com.example.grader.entity.Tag
 import java.io.Serializable
 
 /**
@@ -10,5 +8,5 @@ import java.io.Serializable
 data class ProblemTagDto(
     val id: Long? = null,
     val problemId: Long? = null,
-    val tag: TagDto? = null
+    val tag: Long? = null,
 ) : Serializable

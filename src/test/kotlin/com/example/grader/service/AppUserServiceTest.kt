@@ -1,23 +1,18 @@
 package com.example.grader.service
 
-import com.example.grader.dto.RequesttResponse.*
-import com.example.grader.dto.AppUserDto
+import com.example.grader.dto.RequestResponse.*
 import com.example.grader.entity.AppUser
 import com.example.grader.entity.Role
 import com.example.grader.error.*
 import com.example.grader.repository.AppUserRepository
 import com.example.grader.security.JwtService
-import com.example.grader.util.toAppUserDTO
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.mockito.Mockito.*
 import org.mockito.kotlin.any
-import org.mockito.kotlin.whenever
 import org.springframework.security.authentication.AuthenticationManager
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.web.multipart.MultipartFile
-import java.time.Instant
 import java.util.*
 
 class AppUserServiceTest {

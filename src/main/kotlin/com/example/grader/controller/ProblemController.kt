@@ -2,7 +2,7 @@ package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
 import com.example.grader.dto.ProblemDto
-import com.example.grader.dto.RequesttResponse.ProblemRequest
+import com.example.grader.dto.RequestResponse.ProblemRequest
 import com.example.grader.service.ProblemService
 import com.example.grader.util.ResponseUtil
 import jakarta.validation.Valid

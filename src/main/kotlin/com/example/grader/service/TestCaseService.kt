@@ -1,7 +1,7 @@
 package com.example.grader.service
 
 import com.example.grader.dto.TestCaseDto
-import com.example.grader.dto.RequesttResponse.TestCaseRequest
+import com.example.grader.dto.RequestResponse.TestCaseRequest
 import com.example.grader.entity.Problem
 import com.example.grader.entity.TestCase
 import com.example.grader.error.BadRequestException

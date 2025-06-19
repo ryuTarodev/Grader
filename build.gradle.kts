@@ -41,6 +41,8 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 //    Argon2
     implementation("org.bouncycastle:bcprov-jdk18on:1.76")
+//    loki
+    implementation("com.github.loki4j:loki-logback-appender:1.4.1")
 
     compileOnly("org.projectlombok:lombok")
     runtimeOnly("org.postgresql:postgresql:42.7.3")

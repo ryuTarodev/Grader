@@ -13,7 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 class SecurityConfig(
     private val corsConfig: CorsConfig,
-    private val jwtFilter: JwtAuthenticationFilter,
+    private val jwtAuthenticationFilter: JwtAuthenticationFilter,
     private val authenticationProvider: AuthenticationProvider
 ) {
 
@@ -29,14 +29,12 @@ class SecurityConfig(
                     "/tags/**",
                     "/testcases/**",
                 ).permitAll()
-                it.requestMatchers(
-                    "/api/users/**",
-                    "/api/problems/**",).hasRole("ADMIN")
+                it.requestMatchers("/api/users/**", "/api/problems/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authenticationProvider(authenticationProvider)
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter::class.java)
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .build()
     }
 

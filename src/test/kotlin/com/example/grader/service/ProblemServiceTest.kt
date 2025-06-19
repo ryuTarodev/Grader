@@ -1,17 +1,15 @@
 package com.example.grader.service
 
-import com.example.grader.dto.RequesttResponse.ProblemRequest
+import com.example.grader.dto.RequestResponse.ProblemRequest
 import com.example.grader.entity.Difficulty
 import com.example.grader.entity.Problem
 import com.example.grader.error.BadRequestException
 import com.example.grader.error.ProblemNotFoundException
 import com.example.grader.repository.ProblemRepository
-import com.example.grader.util.toProblemDTO
 import io.mockk.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.springframework.data.repository.findByIdOrNull
-import java.util.*
 
 class ProblemServiceTest {
 

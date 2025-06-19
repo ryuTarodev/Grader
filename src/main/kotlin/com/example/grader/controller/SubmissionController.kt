@@ -1,7 +1,7 @@
 package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
-import com.example.grader.dto.RequesttResponse.SubmissionRequest
+import com.example.grader.dto.RequestResponse.SubmissionRequest
 import com.example.grader.dto.SubmissionDto
 import com.example.grader.service.SubmissionService
 import com.example.grader.util.ResponseUtil
@@ -19,15 +19,14 @@ class SubmissionController(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     // Create a new submission
-    @PostMapping("/problems/{problemId}/users/{userId}")
+    @PostMapping("/problems/{problemId}")
     fun createSubmission(
         @PathVariable problemId: Long,
-        @PathVariable userId: Long,
         @Valid @RequestBody submissionRequest: SubmissionRequest
     ): ResponseEntity<ApiResponse<SubmissionDto>> {
-        logger.info("Received request to create submission for problemId: $problemId, userId: $userId")
+        logger.info("Received request to create submission for problemId: $problemId")
 
-        val submission = submissionService.createSubmission(problemId, userId, submissionRequest)
+        val submission = submissionService.createSubmission(problemId = problemId,submissionRequest= submissionRequest)
         val response = ResponseUtil.created("Submission created successfully", submission, null)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
@@ -69,34 +68,13 @@ class SubmissionController(
     }
 
     // Get all submissions for a specific problem and user
-    @GetMapping("/problems/{problemId}/users/{userId}")
+    @GetMapping("/problems/{problemId}")
     fun getSubmissionsByProblemAndUser(
         @PathVariable problemId: Long,
-        @PathVariable userId: Long
     ): ResponseEntity<ApiResponse<List<SubmissionDto>>> {
-        logger.info("Received request to get submissions for problemId: $problemId and userId: $userId")
+        logger.info("Received request to get submissions for problemId: $problemId")
 
-        val submissions = submissionService.getSubmissionsByProblemAndUser(problemId, userId)
-        val response = ResponseUtil.success("Submissions returned successfully", submissions, null)
-        return ResponseEntity.ok(response)
-    }
-
-    // Get all submissions by a specific user
-    @GetMapping("/users/{userId}")
-    fun getSubmissionsByUser(@PathVariable userId: Long): ResponseEntity<ApiResponse<List<SubmissionDto>>> {
-        logger.info("Received request to get all submissions for userId: $userId")
-
-        val submissions = submissionService.getSubmissionsByUser(userId)
-        val response = ResponseUtil.success("Submissions returned successfully", submissions, null)
-        return ResponseEntity.ok(response)
-    }
-
-    // Get all submissions for a specific problem
-    @GetMapping("/problems/{problemId}")
-    fun getSubmissionsByProblem(@PathVariable problemId: Long): ResponseEntity<ApiResponse<List<SubmissionDto>>> {
-        logger.info("Received request to get all submissions for problemId: $problemId")
-
-        val submissions = submissionService.getSubmissionsByProblem(problemId)
+        val submissions = submissionService.getSubmissionsByProblemAndUser(problemId)
         val response = ResponseUtil.success("Submissions returned successfully", submissions, null)
         return ResponseEntity.ok(response)
     }
@@ -112,14 +90,13 @@ class SubmissionController(
     }
 
     // Delete all submissions for a specific problem and user
-    @DeleteMapping("/problems/{problemId}/users/{userId}")
+    @DeleteMapping("/problems/{problemId}")
     fun deleteAllSubmissionsByProblemAndUser(
         @PathVariable problemId: Long,
-        @PathVariable userId: Long
     ): ResponseEntity<ApiResponse<Unit>> {
-        logger.info("Received request to delete all submissions for problemId: $problemId and userId: $userId")
+        logger.info("Received request to delete all submissions for problemId: $problemId")
 
-        submissionService.deleteAllSubmissionsByProblemAndUser(problemId, userId)
+        submissionService.deleteAllSubmissionsByProblemAndUser(problemId)
         val response = ResponseUtil.success("Submission deleted successfully", Unit, null)
         return ResponseEntity.ok(response)
     }

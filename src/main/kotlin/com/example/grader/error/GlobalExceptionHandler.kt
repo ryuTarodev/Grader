@@ -75,7 +75,10 @@ class GlobalExceptionHandler {
     }
 
     // Internal Server Error (500)
-    @ExceptionHandler(JwtKeyException::class)
+    @ExceptionHandler(
+        JwtKeyException::class,
+        SubmissionSendException::class
+    )
     fun handleInternalServerException(exception: RuntimeException): ResponseEntity<ApiError> {
         logger.error("Internal server error: ${exception.message}", exception)
         return buildResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error occurred")
@@ -120,6 +123,7 @@ abstract class AppNotFoundException(message: String) : AppException(message)
 abstract class AppBadRequestException(message: String) : AppException(message)
 abstract class AppUnauthorizedException(message: String) : AppException(message)
 abstract class AppConflictException(message: String) : AppException(message)
+abstract class AppInternalException(message: String) : AppException(message)
 
 // Specific Exception Classes
 // Not Found Exceptions
@@ -149,3 +153,6 @@ class DuplicateException(message: String) : AppConflictException(message)
 
 // Internal Server Error
 class JwtKeyException(message: String) : IllegalStateException(message)
+
+// SubmissionSendException
+class SubmissionSendException(message: String) : AppInternalException(message)

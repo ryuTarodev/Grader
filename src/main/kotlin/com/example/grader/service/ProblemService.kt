@@ -1,7 +1,7 @@
 package com.example.grader.service
 
 import com.example.grader.dto.ProblemDto
-import com.example.grader.dto.RequesttResponse.ProblemRequest
+import com.example.grader.dto.RequestResponse.ProblemRequest
 import com.example.grader.entity.Problem
 import com.example.grader.error.BadRequestException
 import com.example.grader.error.ProblemNotFoundException

@@ -1,4 +1,4 @@
-package com.example.grader.dto.RequesttResponse
+package com.example.grader.dto.RequestResponse
 
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty

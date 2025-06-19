@@ -1,7 +1,7 @@
 package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
-import com.example.grader.dto.RequesttResponse.TestCaseRequest
+import com.example.grader.dto.RequestResponse.TestCaseRequest
 import com.example.grader.dto.TestCaseDto
 import com.example.grader.service.TestCaseService
 import com.example.grader.util.ResponseUtil

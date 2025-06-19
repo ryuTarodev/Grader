@@ -20,9 +20,15 @@ class RabbitMQConfig {
     @Value("\${rabbitmq.routing.key}")
     private lateinit var submissionRoutingKey: String
 
+    @Value("\${rabbitmq.queue.result}")
+    private lateinit var resultQueueName: String
+
 
     @Bean
     fun submissionQueue(): Queue = Queue(submissionQueueName, false)
+
+    @Bean
+    fun resultQueue(): Queue = Queue(resultQueueName, false)
 
     @Bean
     fun exchange(): TopicExchange = TopicExchange(exchangeName)
@@ -37,10 +43,5 @@ class RabbitMQConfig {
     @Bean
     fun messageConverter(): Jackson2JsonMessageConverter = Jackson2JsonMessageConverter()
 
-    @Bean
-    fun rabbitTemplate(connectionFactory: ConnectionFactory): RabbitTemplate {
-        return RabbitTemplate(connectionFactory).apply {
-            messageConverter = messageConverter()
-        }
-    }
+
 }

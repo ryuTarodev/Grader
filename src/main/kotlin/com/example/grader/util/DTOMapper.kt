@@ -8,7 +8,6 @@ fun AppUser.toAppUserDTO(): AppUserDto {
     return AppUserDto(
         id = this.id,
         appUsername = this.appUsername,
-        role = this.role,
         profilePicture = this.profilePicture
     )
 }

@@ -1,13 +1,9 @@
 package com.example.grader.service
 
-import com.example.grader.dto.RequesttResponse.SubmissionRequest
-import com.example.grader.dto.SubmissionDto
-import com.example.grader.dto.SubmissionSendMessage
+import com.example.grader.dto.RequestResponse.SubmissionRequest
 import com.example.grader.entity.*
 import com.example.grader.error.*
 import com.example.grader.repository.*
-import com.example.grader.util.mapSubmissionListEntityToSubmissionListDTO
-import com.example.grader.util.mapTestCaseListEntityToTestCaseListDTO
 import io.mockk.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*

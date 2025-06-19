@@ -1,6 +1,6 @@
 package com.example.grader.service
 
-import com.example.grader.dto.RequesttResponse.TestCaseRequest
+import com.example.grader.dto.RequestResponse.TestCaseRequest
 import com.example.grader.entity.Difficulty
 import com.example.grader.entity.Problem
 import com.example.grader.entity.TestCase
@@ -10,7 +10,6 @@ import com.example.grader.error.ProblemNotFoundException
 import com.example.grader.error.TestCaseNotFoundException
 import com.example.grader.repository.ProblemRepository
 import com.example.grader.repository.TestCaseRepository
-import com.example.grader.util.toTestCaseDTO
 import io.mockk.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*

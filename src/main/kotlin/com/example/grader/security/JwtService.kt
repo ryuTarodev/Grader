@@ -50,6 +50,7 @@ class JwtService(private val jwtKey: JwtKey) {
             .setSubject(userDetails.username)
             .setIssuedAt(Date(System.currentTimeMillis()))
             .setExpiration(Date(System.currentTimeMillis() + expirationTime))
+            .claim("role", userDetails.authorities.map { it.authority })
             .signWith(jwtKey.secretKey)
             .compact()
 

@@ -1,11 +1,10 @@
 package com.example.grader.controller
 
 import com.example.grader.dto.*
-import com.example.grader.dto.RequesttResponse.AppUserRequest
-import com.example.grader.dto.RequesttResponse.LoginRequest
-import com.example.grader.dto.RequesttResponse.LoginResponse
-import com.example.grader.dto.RequesttResponse.ResetPasswordRequest
-import com.example.grader.entity.AppUser
+import com.example.grader.dto.RequestResponse.AppUserRequest
+import com.example.grader.dto.RequestResponse.AppUserResponse
+import com.example.grader.dto.RequestResponse.LoginRequest
+import com.example.grader.dto.RequestResponse.ResetPasswordRequest
 import com.example.grader.service.AppUserService
 import com.example.grader.util.ResponseUtil
 import org.springframework.http.HttpStatus
@@ -21,16 +20,16 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/auth")
 class AuthController(private val appUserService: AppUserService) {
     @PostMapping("/signUp")
-    fun signUp(@RequestBody appUserRequest: AppUserRequest): ResponseEntity<ApiResponse<AppUserDto>> {
+    fun signUp(@RequestBody appUserRequest: AppUserRequest): ResponseEntity<ApiResponse<AppUserResponse>> {
         val appUser = appUserService.signUp(appUserRequest)
-        val response = ResponseUtil.success("AppUser signed up successfully", appUser, null)
+        val response = ResponseUtil.success("AppUser signed up successfully", appUser, "1 days")
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
     @PostMapping("/signIn")
-    fun signIn(@RequestBody loginRequest: LoginRequest): ResponseEntity<ApiResponse<AppUserDto>> {
-        val pair = appUserService.signIn(loginRequest)
-        val response = ResponseUtil.success("AppUser signed in", pair.first, pair.second)
+    fun signIn(@RequestBody loginRequest: LoginRequest): ResponseEntity<ApiResponse<AppUserResponse>> {
+        val appUser = appUserService.signIn(loginRequest)
+        val response = ResponseUtil.success("AppUser signed in", appUser, "1 days")
         return ResponseEntity.ok(response)
     }
 

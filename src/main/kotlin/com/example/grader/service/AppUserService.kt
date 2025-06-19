@@ -1,10 +1,7 @@
 package com.example.grader.service
 
 import com.example.grader.dto.*
-import com.example.grader.dto.RequesttResponse.LoginRequest
-import com.example.grader.dto.RequesttResponse.LoginResponse
-import com.example.grader.dto.RequesttResponse.ResetPasswordRequest
-import com.example.grader.dto.RequesttResponse.AppUserRequest
+import com.example.grader.dto.RequestResponse.*
 import com.example.grader.entity.AppUser
 import com.example.grader.error.BadRequestException
 import com.example.grader.error.UserNotFoundException
@@ -12,7 +9,6 @@ import com.example.grader.error.DuplicateException
 import com.example.grader.error.UnauthorizedException
 import com.example.grader.repository.AppUserRepository
 import com.example.grader.security.JwtService
-import com.example.grader.util.ResponseUtil
 import com.example.grader.util.mapUserListEntityToUserListDTO
 import com.example.grader.util.toAppUserDTO
 import org.slf4j.LoggerFactory
@@ -35,24 +31,37 @@ class AppUserService(
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun signUp(appUserRequest: AppUserRequest): AppUserDto {
-        if (appUserRepository.existsAppUserByAppUsername(appUserRequest.appUsername)) {
-            throw DuplicateException("Username ${appUserRequest.appUsername} already exists")
+    fun signUp(appUserRequest: AppUserRequest): AppUserResponse {
+        if (appUserRepository.existsAppUserByAppUsername(appUserRequest.username)) {
+            throw DuplicateException("Username ${appUserRequest.username} already exists")
         }
 
-        logger.info("Saving user with username: ${appUserRequest.appUsername}")
-        val appUser = AppUser(
-            appUsername = appUserRequest.appUsername,
-            clientPassword = passwordEncoder.encode(appUserRequest.clientPassword),
-            role = appUserRequest.role,
-        )
-        val savedAppUser = appUserRepository.save(appUser)
+        logger.info("Saving user with username: ${appUserRequest.username}")
 
-        return savedAppUser.toAppUserDTO()
+        if (appUserRequest.password.isBlank()) {
+            throw BadRequestException("Password must not be empty")
+        }
+
+        val encodedPassword = passwordEncoder.encode(appUserRequest.password)
+        val appUser = AppUser(
+            appUsername = appUserRequest.username,
+            clientPassword = encodedPassword,
+            role = appUserRequest.role,
+            profilePicture = appUserRequest.profilePicture.orEmpty()
+        )
+
+        val savedAppUser = appUserRepository.save(appUser)
+        val accessToken = jwtService.generateAccessToken(savedAppUser)
+
+        val appUserDto = savedAppUser.toAppUserDTO()
+        if (appUserDto.profilePicture.isNotEmpty()) {
+            appUserDto.profilePicture = s3Service.generatePresignedUrl(appUserDto.profilePicture)
+        }
+
+        return AppUserResponse(appUser = appUserDto, token = accessToken)
     }
 
     fun resetPassword(resetPasswordRequest: ResetPasswordRequest): AppUserDto {
-        // Validate input
         if (resetPasswordRequest.oldPassword.isBlank() || resetPasswordRequest.newPassword.isBlank()) {
             throw BadRequestException("Password fields must not be empty")
         }
@@ -64,24 +73,23 @@ class AppUserService(
         val appUser = appUserRepository.findAppUserByAppUsername(resetPasswordRequest.username)
             ?: throw UserNotFoundException("Username: ${resetPasswordRequest.username} does not exist")
 
-        // Validate old password
         if (!isPasswordValid(resetPasswordRequest.oldPassword, appUser.clientPassword)) {
             throw UnauthorizedException("Old password is incorrect")
         }
 
-        // Prevent password reuse
         if (isSamePassword(resetPasswordRequest.newPassword, appUser.clientPassword)) {
             throw BadRequestException("New password must be different from the old password")
         }
 
-        // Update password
         appUser.clientPassword = passwordEncoder.encode(resetPasswordRequest.newPassword)
         val savedAppUser = appUserRepository.save(appUser)
 
         return savedAppUser.toAppUserDTO()
     }
 
-    fun signIn(loginRequest: LoginRequest): Pair<AppUserDto, LoginResponse> {
+
+    //      verifies the username and password.
+    fun signIn(loginRequest: LoginRequest): AppUserResponse {
         authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(
                 loginRequest.username,
@@ -89,19 +97,19 @@ class AppUserService(
             )
         )
 
-        val appUser = appUserRepository.findAppUserByAppUsername(loginRequest.username)
+        val savedAppUser = appUserRepository.findAppUserByAppUsername(loginRequest.username)
             ?: throw UserNotFoundException("User not found with username: ${loginRequest.username}")
 
-        val accessToken = jwtService.generateAccessToken(appUser)
+        val accessToken = jwtService.generateAccessToken(savedAppUser)
 
-        logger.info("User ${appUser.appUsername} login successful!")
+        logger.info("User ${savedAppUser.appUsername} login successful!")
 
-        val loginResponse = LoginResponse(
-            expirationTime = "1 Days",
-            accessToken = accessToken,
-        )
+        val appUserDto = savedAppUser.toAppUserDTO()
+        if (appUserDto.profilePicture.isNotEmpty()) {
+            appUserDto.profilePicture = s3Service.generatePresignedUrl(appUserDto.profilePicture)
+        }
 
-        return Pair(appUser.toAppUserDTO(), loginResponse)
+        return AppUserResponse(appUser = appUserDto, token = accessToken)
     }
 
     fun getAppUsers(): List<AppUserDto> {
@@ -141,7 +149,7 @@ class AppUserService(
             UserNotFoundException("No User found with ID $userId")
         }
 
-        updateRequest.appUsername.takeIf { it.isNotBlank() }?.let { newUsername ->
+        updateRequest.username.takeIf { it.isNotBlank() }?.let { newUsername ->
             if (appUserRepository.existsAppUserByAppUsername(newUsername) && newUsername != appUser.appUsername) {
                 throw DuplicateException("Username $newUsername is already taken")
             }
@@ -164,7 +172,7 @@ class AppUserService(
         appUserRepository.delete(existingAppUser)
     }
 
-    // Private helper methods
+
     private fun isPasswordValid(inputPassword: String, encodedPassword: String): Boolean {
         return passwordEncoder.matches(inputPassword, encodedPassword)
     }

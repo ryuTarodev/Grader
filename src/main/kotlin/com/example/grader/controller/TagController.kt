@@ -1,7 +1,7 @@
 package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
-import com.example.grader.dto.RequesttResponse.TagRequest
+import com.example.grader.dto.RequestResponse.TagRequest
 import com.example.grader.dto.TagDto
 import com.example.grader.service.TagService
 import com.example.grader.util.ResponseUtil

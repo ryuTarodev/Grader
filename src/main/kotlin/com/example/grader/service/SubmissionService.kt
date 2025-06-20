@@ -49,7 +49,7 @@ class SubmissionService(
         validateSubmissionRequest(submissionRequest)
 
         val appUser = getAuthenticatedUser()
-        logger.info("Creating submission for problemId: $problemId, user: $appUser")
+        logger.info("Start: createSubmission | problemId=$problemId, userId=${appUser.id}")
 
         val problem = problemRepository.findByIdOrNull(problemId)
             ?: throw ProblemNotFoundException("Problem not found with ID: $problemId")
@@ -68,7 +68,7 @@ class SubmissionService(
         )
 
         val savedSubmission = submissionRepository.save(submission)
-        logger.info("Submission created successfully with ID: ${savedSubmission.id}")
+        logger.info("Submission saved | submissionId=${savedSubmission.id}")
 
         val submissionDto = savedSubmission.toSubmissionDTO()
         val message = SubmissionSendMessage(
@@ -77,13 +77,14 @@ class SubmissionService(
         )
 
         try {
-            logger.info("Sending submission ${savedSubmission.id} to RabbitMQ for processing")
+            logger.info("Sending submission to queue | submissionId=${savedSubmission.id}")
             submissionProducer.sendSubmission(message)
         } catch (e: Exception) {
-            logger.error("Failed to send submission ${savedSubmission.id} to RabbitMQ", e)
+            logger.error("Failed to send submission to queue | submissionId=${savedSubmission.id}", e)
             throw SubmissionSendException("Failed to send submission ${savedSubmission.id} to RabbitMQ")
         }
 
+        logger.info("End: createSubmission | submissionId=${savedSubmission.id}")
         return submissionDto
     }
 
@@ -91,7 +92,7 @@ class SubmissionService(
     fun updateSubmissionFields(submissionId: Long, submissionRequest: SubmissionRequest): SubmissionDto {
         validateSubmissionRequest(submissionRequest)
 
-        logger.info("Updating submission fields for ID: $submissionId")
+        logger.info("Start: updateSubmissionFields | submissionId=$submissionId")
 
         val submission = submissionRepository.findByIdOrNull(submissionId)
             ?: throw SubmissionNotFoundException("Submission not found with ID: $submissionId")
@@ -105,14 +106,14 @@ class SubmissionService(
         submission.status = Status.PENDING
 
         val updatedSubmission = submissionRepository.save(submission)
-        logger.info("Submission updated successfully with ID: $submissionId")
+        logger.info("Submission updated | submissionId=${updatedSubmission.id}")
 
         return updatedSubmission.toSubmissionDTO()
     }
 
     @Transactional
     fun updateSubmissionResult(submissionId: Long, score: Float): SubmissionDto {
-        logger.info("Updating submission result for ID: $submissionId with score: $score")
+        logger.info("Start: updateSubmissionResult | submissionId=$submissionId, score=$score")
 
         if (score < 0f || score > 100f) {
             throw BadRequestException("Score must be between 0 and 100")
@@ -125,13 +126,13 @@ class SubmissionService(
         submission.status = determineStatus(score)
 
         val updatedSubmission = submissionRepository.save(submission)
-        logger.info("Submission result updated successfully for ID: $submissionId, status: ${submission.status}")
+        logger.info("Submission result updated | submissionId=$submissionId, status=${submission.status}")
 
         return updatedSubmission.toSubmissionDTO()
     }
 
     fun getSubmissionsByProblemAndUser(problemId: Long): List<SubmissionDto> {
-        logger.info("Retrieving submissions for problemId: $problemId")
+        logger.info("Start: getSubmissionsByProblemAndUser | problemId=$problemId")
 
         val appUser = getAuthenticatedUser()
 
@@ -139,11 +140,13 @@ class SubmissionService(
             ?: throw ProblemNotFoundException("Problem not found with ID: $problemId")
 
         val submissions = submissionRepository.findAllByProblemIdAndAppUserId(problemId, appUser.id)
+        logger.info("Retrieved submissions | count=${submissions?.size ?: 0}")
+
         return mapSubmissionListEntityToSubmissionListDTO(submissions ?: emptyList())
     }
 
     fun getSubmissionById(submissionId: Long): SubmissionDto {
-        logger.info("Retrieving submission with ID: $submissionId")
+        logger.info("Start: getSubmissionById | submissionId=$submissionId")
 
         val submission = submissionRepository.findByIdOrNull(submissionId)
             ?: throw SubmissionNotFoundException("Submission not found with ID: $submissionId")
@@ -151,10 +154,9 @@ class SubmissionService(
         return submission.toSubmissionDTO()
     }
 
-
     @Transactional
     fun deleteAllSubmissionsByProblemAndUser(problemId: Long) {
-        logger.info("Deleting all submissions for problemId: $problemId and the authenticated user")
+        logger.info("Start: deleteAllSubmissionsByProblemAndUser | problemId=$problemId")
 
         val appUser = getAuthenticatedUser()
 
@@ -164,21 +166,20 @@ class SubmissionService(
         val deletedCount = submissionRepository.countByProblemIdAndAppUserId(problemId, appUser.id)
         submissionRepository.deleteAllByProblemIdAndAppUserId(problemId, appUser.id)
 
-        logger.info("Deleted $deletedCount submissions for problemId: $problemId and userId: ${appUser.id}")
+        logger.info("Deleted submissions | count=$deletedCount, userId=${appUser.id}, problemId=$problemId")
     }
 
     @Transactional
     fun deleteSubmission(submissionId: Long) {
-        logger.info("Deleting submission with ID: $submissionId")
+        logger.info("Start: deleteSubmission | submissionId=$submissionId")
 
         val submission = submissionRepository.findByIdOrNull(submissionId)
             ?: throw SubmissionNotFoundException("Submission not found with ID: $submissionId")
 
         submissionRepository.delete(submission)
-        logger.info("Submission deleted successfully with ID: $submissionId")
+        logger.info("Submission deleted | submissionId=$submissionId")
     }
 
-    // Private helper methods
     private fun validateSubmissionRequest(request: SubmissionRequest) {
         if (request.code.isBlank()) {
             throw BadRequestException("Submission code cannot be blank")

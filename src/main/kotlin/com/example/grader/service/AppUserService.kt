@@ -32,13 +32,15 @@ class AppUserService(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     fun signUp(appUserRequest: AppUserRequest): AppUserResponse {
+        logger.info("Attempting to sign up user: ${appUserRequest.username}")
+
         if (appUserRepository.existsAppUserByAppUsername(appUserRequest.username)) {
+            logger.warn("Sign up failed: Username already exists - ${appUserRequest.username}")
             throw DuplicateException("Username ${appUserRequest.username} already exists")
         }
 
-        logger.info("Saving user with username: ${appUserRequest.username}")
-
         if (appUserRequest.password.isBlank()) {
+            logger.warn("Sign up failed: Password is blank for user: ${appUserRequest.username}")
             throw BadRequestException("Password must not be empty")
         }
 
@@ -51,22 +53,30 @@ class AppUserService(
         )
 
         val savedAppUser = appUserRepository.save(appUser)
+        logger.info("User saved successfully: ${savedAppUser.appUsername}")
+
         val accessToken = jwtService.generateAccessToken(savedAppUser)
+        logger.info("JWT token generated for user: ${savedAppUser.appUsername}")
 
         val appUserDto = savedAppUser.toAppUserDTO()
         if (appUserDto.profilePicture.isNotEmpty()) {
             appUserDto.profilePicture = s3Service.generatePresignedUrl(appUserDto.profilePicture)
+            logger.info("Presigned URL generated for profile picture of user: ${appUserDto.username}")
         }
 
         return AppUserResponse(appUser = appUserDto, token = accessToken)
     }
 
     fun resetPassword(resetPasswordRequest: ResetPasswordRequest): AppUserDto {
+        logger.info("Password reset attempt for user: ${resetPasswordRequest.username}")
+
         if (resetPasswordRequest.oldPassword.isBlank() || resetPasswordRequest.newPassword.isBlank()) {
+            logger.warn("Reset password failed: one or more fields are empty")
             throw BadRequestException("Password fields must not be empty")
         }
 
         if (!isValidPassword(resetPasswordRequest.newPassword)) {
+            logger.warn("Reset password failed: new password does not meet complexity requirements")
             throw BadRequestException("New password must meet complexity requirements")
         }
 
@@ -74,22 +84,25 @@ class AppUserService(
             ?: throw UserNotFoundException("Username: ${resetPasswordRequest.username} does not exist")
 
         if (!isPasswordValid(resetPasswordRequest.oldPassword, appUser.clientPassword)) {
+            logger.warn("Reset password failed: incorrect old password for user: ${resetPasswordRequest.username}")
             throw UnauthorizedException("Old password is incorrect")
         }
 
         if (isSamePassword(resetPasswordRequest.newPassword, appUser.clientPassword)) {
+            logger.warn("Reset password failed: new password same as old for user: ${resetPasswordRequest.username}")
             throw BadRequestException("New password must be different from the old password")
         }
 
         appUser.clientPassword = passwordEncoder.encode(resetPasswordRequest.newPassword)
         val savedAppUser = appUserRepository.save(appUser)
 
+        logger.info("Password reset successful for user: ${resetPasswordRequest.username}")
         return savedAppUser.toAppUserDTO()
     }
 
-
-    //      verifies the username and password.
     fun signIn(loginRequest: LoginRequest): AppUserResponse {
+        logger.info("User attempting to sign in: ${loginRequest.username}")
+
         authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(
                 loginRequest.username,
@@ -101,25 +114,39 @@ class AppUserService(
             ?: throw UserNotFoundException("User not found with username: ${loginRequest.username}")
 
         val accessToken = jwtService.generateAccessToken(savedAppUser)
-
-        logger.info("User ${savedAppUser.appUsername} login successful!")
+        logger.info("Login successful for user: ${savedAppUser.appUsername}")
 
         val appUserDto = savedAppUser.toAppUserDTO()
         if (appUserDto.profilePicture.isNotEmpty()) {
             appUserDto.profilePicture = s3Service.generatePresignedUrl(appUserDto.profilePicture)
+            logger.info("Presigned URL generated for profile picture of user: ${appUserDto.username}")
         }
 
         return AppUserResponse(appUser = appUserDto, token = accessToken)
     }
 
     fun getAppUsers(): List<AppUserDto> {
+        logger.info("Fetching all app users")
         val appUserList = appUserRepository.findAll()
-        logger.info("Find AppUsers successfully")
-        return mapUserListEntityToUserListDTO(appUserList)
+
+        val dtoList = appUserList.map { user ->
+            val dto = user.toAppUserDTO()
+            if (dto.profilePicture.isNotEmpty()) {
+                dto.profilePicture = s3Service.generatePresignedUrl(user.username).toString()
+                logger.info("Presigned URL generated for user: ${user.username}")
+            }
+            dto
+        }
+
+        logger.info("Retrieved ${dtoList.size} AppUsers successfully")
+        return dtoList
     }
 
     fun getUserById(userId: Long): AppUserDto {
+        logger.info("Fetching user by ID: $userId")
+
         val appUser = appUserRepository.findById(userId).orElseThrow {
+            logger.warn("No user found with ID: $userId")
             UserNotFoundException("No User found with ID $userId")
         }
 
@@ -127,30 +154,39 @@ class AppUserService(
         if (appUser.profilePicture.isNotEmpty()) {
             val presignedUrl = s3Service.generatePresignedUrl(appUser.profilePicture)
             appUserDto.profilePicture = presignedUrl
+            logger.info("Presigned URL generated for profile picture of user ID: $userId")
         }
 
         return appUserDto
     }
 
     fun uploadUserProfile(userId: Long, png: MultipartFile): AppUserDto {
+        logger.info("Uploading profile picture for user ID: $userId")
+
         val pngName = s3Service.savePngToS3(png)
         val appUser = appUserRepository.findById(userId).orElseThrow {
+            logger.warn("Upload failed: No user found with ID $userId")
             UserNotFoundException("No User found with ID $userId")
         }
 
         appUser.profilePicture = pngName
         appUserRepository.save(appUser)
 
+        logger.info("Profile picture uploaded for user: ${appUser.appUsername}")
         return appUser.toAppUserDTO()
     }
 
     fun updateUser(userId: Long, updateRequest: AppUserRequest): AppUserDto {
+        logger.info("Updating user with ID: $userId")
+
         val appUser = appUserRepository.findById(userId).orElseThrow {
+            logger.warn("Update failed: No user found with ID $userId")
             UserNotFoundException("No User found with ID $userId")
         }
 
         updateRequest.username.takeIf { it.isNotBlank() }?.let { newUsername ->
             if (appUserRepository.existsAppUserByAppUsername(newUsername) && newUsername != appUser.appUsername) {
+                logger.warn("Update failed: Username $newUsername already taken")
                 throw DuplicateException("Username $newUsername is already taken")
             }
             appUser.appUsername = newUsername
@@ -161,17 +197,21 @@ class AppUserService(
         appUser.updatedAt = Instant.now()
 
         val updatedUser = appUserRepository.save(appUser)
+        logger.info("User with ID: $userId updated successfully")
         return updatedUser.toAppUserDTO()
     }
 
     fun deleteUser(userId: Long) {
+        logger.info("Attempting to delete user with ID: $userId")
+
         val existingAppUser = appUserRepository.findById(userId).orElseThrow {
+            logger.warn("Delete failed: No user found with ID $userId")
             UserNotFoundException("No User found with ID $userId")
         }
 
         appUserRepository.delete(existingAppUser)
+        logger.info("User deleted successfully: ${existingAppUser.appUsername}")
     }
-
 
     private fun isPasswordValid(inputPassword: String, encodedPassword: String): Boolean {
         return passwordEncoder.matches(inputPassword, encodedPassword)

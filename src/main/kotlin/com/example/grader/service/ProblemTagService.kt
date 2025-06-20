@@ -18,113 +18,125 @@ class ProblemTagService(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     fun createProblemTag(problemId: Long, tagId: Long): ProblemTagDto {
-        logger.info("Creating ProblemTag for problemId: $problemId and tagId: $tagId")
+        logger.info("Attempting to create ProblemTag (problemId=$problemId, tagId=$tagId)")
 
         val problem = problemRepository.findByIdOrNull(problemId)
             ?: throw ProblemNotFoundException("Problem not found with ID: $problemId")
 
+
         val tag = tagRepository.findByIdOrNull(tagId)
             ?: throw TagNotFoundException("Tag not found with ID: $tagId")
 
-        val existingProblemTag = problemTagRepository.findByProblemIdAndTagId(problemId, tagId)
-        if (existingProblemTag != null) {
-            throw DuplicateException("ProblemTag already exists for problemId: $problemId and tagId: $tagId")
+
+        if (problemTagRepository.findByProblemIdAndTagId(problemId, tagId) != null) {
+            logger.warn("Duplicate ProblemTag (problemId=$problemId, tagId=$tagId)")
+            throw DuplicateException("ProblemTag already exists")
         }
 
-        val problemTag = ProblemTag(problem = problem, tag = tag)
-        val savedProblemTag = problemTagRepository.save(problemTag)
-
+        val savedProblemTag = problemTagRepository.save(ProblemTag(problem = problem, tag = tag))
+        logger.info("ProblemTag created successfully: ID=${savedProblemTag.id}")
         return savedProblemTag.toProblemTagDTO()
     }
 
     fun getAllProblemTags(): List<ProblemTagDto> {
-        logger.info("Retrieving all ProblemTags")
-
-        val problemTags = problemTagRepository.findAll()
-        return mapProblemTagListEntityToProblemTagListDTO(problemTags)
+        logger.info("Fetching all ProblemTags")
+        return mapProblemTagListEntityToProblemTagListDTO(problemTagRepository.findAll())
     }
 
-
     fun getProblemTagsByProblemId(problemId: Long): List<ProblemTagDto> {
-        logger.info("Retrieving ProblemTags for problemId: $problemId")
+        logger.info("Fetching ProblemTags for problemId=$problemId")
 
-        // Validate that problem exists
-        val problem = problemRepository.findByIdOrNull(problemId)
+        problemRepository.findByIdOrNull(problemId)
             ?: throw ProblemNotFoundException("Problem not found with ID: $problemId")
 
-        val problemTags = problemTagRepository.findByProblemId(problemId)?: throw ProblemNotFoundException("Tag not found with ID: $problemId")
-        return mapProblemTagListEntityToProblemTagListDTO(problemTags)
+
+        val tags = problemTagRepository.findByProblemId(problemId)
+            ?: throw ProblemNotFoundException("Tag not found with ID: $problemId")
+
+
+        return mapProblemTagListEntityToProblemTagListDTO(tags)
     }
 
     fun getProblemTagsByTagId(tagId: Long): List<ProblemTagDto> {
-        logger.info("Retrieving ProblemTags for tagId: $tagId")
+        logger.info("Fetching ProblemTags for tagId=$tagId")
 
-        // Validate that tag exists
-        val tag = tagRepository.findByIdOrNull(tagId)
-            ?: throw TagNotFoundException("Tag not found with ID: $tagId")
+        tagRepository.findByIdOrNull(tagId)
+            ?: run {
+                logger.warn("Tag not found with ID: $tagId")
+                throw TagNotFoundException("Tag not found with ID: $tagId")
+            }
 
-        val problemTags = problemTagRepository.findByTagId(tagId) ?: throw TagNotFoundException("Tag not found with ID: $tagId")
+        val problemTags = problemTagRepository.findByTagId(tagId)
+            ?: run {
+                logger.warn("No ProblemTags found for tagId: $tagId")
+                throw TagNotFoundException("Tag not found with ID: $tagId")
+            }
+
         return mapProblemTagListEntityToProblemTagListDTO(problemTags)
     }
 
     fun updateProblemTag(id: Long, newProblemId: Long, newTagId: Long): ProblemTagDto {
-        logger.info("Updating ProblemTag with ID: $id")
+        logger.info("Updating ProblemTag ID=$id to problemId=$newProblemId and tagId=$newTagId")
 
-        // Find existing ProblemTag
-        val existingProblemTag = problemTagRepository.findByIdOrNull(id)
+        val existing = problemTagRepository.findByIdOrNull(id)
             ?: throw ProblemTagNotFoundException("ProblemTag not found with ID: $id")
 
-        // Validate new problem exists
+
         val newProblem = problemRepository.findByIdOrNull(newProblemId)
             ?: throw ProblemNotFoundException("Problem not found with ID: $newProblemId")
 
-        // Validate new tag exists
+
         val newTag = tagRepository.findByIdOrNull(newTagId)
             ?: throw TagNotFoundException("Tag not found with ID: $newTagId")
 
-        // Check if the new combination would create a duplicate (excluding current record)
-        val existingWithSameCombo = problemTagRepository.findByProblemIdAndTagId(newProblemId, newTagId)
-        if (existingWithSameCombo != null && existingWithSameCombo.id != id) {
-            throw DuplicateException("ProblemTag already exists for problemId: $newProblemId and tagId: $newTagId")
+
+        val duplicate = problemTagRepository.findByProblemIdAndTagId(newProblemId, newTagId)
+        if (duplicate != null && duplicate.id != id) {
+            logger.warn("Update would result in duplicate ProblemTag (problemId=$newProblemId, tagId=$newTagId)")
+            throw DuplicateException("Duplicate ProblemTag exists")
         }
 
-        // Update the ProblemTag
-        existingProblemTag.problem = newProblem
-        existingProblemTag.tag = newTag
+        existing.problem = newProblem
+        existing.tag = newTag
 
-        val updatedProblemTag = problemTagRepository.save(existingProblemTag)
-        logger.info("ProblemTag updated successfully with ID: $id")
-
-        return updatedProblemTag.toProblemTagDTO()
+        val updated = problemTagRepository.save(existing)
+        logger.info("ProblemTag ID=$id updated successfully")
+        return updated.toProblemTagDTO()
     }
 
     fun deleteProblemTag(id: Long) {
         logger.info("Deleting ProblemTag with ID: $id")
 
-        val existingProblemTag = problemTagRepository.findByIdOrNull(id)
-            ?: throw ProblemTagNotFoundException("ProblemTag not found with ID: $id")
+        val existing = problemTagRepository.findByIdOrNull(id)
+            ?: run {
+                logger.warn("ProblemTag not found with ID: $id")
+                throw ProblemTagNotFoundException("ProblemTag not found with ID: $id")
+            }
 
-        problemTagRepository.delete(existingProblemTag)
-        logger.info("ProblemTag deleted successfully with ID: $id")
+        problemTagRepository.delete(existing)
+        logger.info("ProblemTag ID=$id deleted successfully")
     }
 
     fun deleteProblemTagByProblemIdAndTagId(problemId: Long, tagId: Long) {
-        logger.info("Deleting ProblemTag for problemId: $problemId and tagId: $tagId")
+        logger.info("Deleting ProblemTag (problemId=$problemId, tagId=$tagId)")
 
-        val problemTag = problemTagRepository.findByProblemIdAndTagId(problemId, tagId)
-            ?: throw ProblemTagNotFoundException("ProblemTag not found for problemId: $problemId and tagId: $tagId")
+        val tag = problemTagRepository.findByProblemIdAndTagId(problemId, tagId)
+            ?: run {
+                logger.warn("ProblemTag not found for problemId=$problemId and tagId=$tagId")
+                throw ProblemTagNotFoundException("ProblemTag not found")
+            }
 
-        problemTagRepository.delete(problemTag)
-        logger.info("ProblemTag deleted successfully for problemId: $problemId and tagId: $tagId")
+        problemTagRepository.delete(tag)
+        logger.info("ProblemTag (problemId=$problemId, tagId=$tagId) deleted successfully")
     }
 
     fun addTagToProblem(problemId: Long, tagId: Long): ProblemTagDto {
-        // This is an alias for createProblemTag with more semantic naming
+        logger.debug("Alias method: addTagToProblem(problemId=$problemId, tagId=$tagId)")
         return createProblemTag(problemId, tagId)
     }
 
     fun removeTagFromProblem(problemId: Long, tagId: Long) {
-        // This is an alias for deleteProblemTagByProblemIdAndTagId with more semantic naming
+        logger.debug("Alias method: removeTagFromProblem(problemId=$problemId, tagId=$tagId)")
         deleteProblemTagByProblemIdAndTagId(problemId, tagId)
     }
 }

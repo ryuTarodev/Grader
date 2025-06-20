@@ -1,9 +1,11 @@
 package com.example.grader.security
 
+import com.example.grader.entity.AppUser
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.core.userdetails.UserDetails
@@ -16,7 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 class JwtAuthenticationFilter(
     private val jwtService: JwtService,
     private val userService: UserDetailsService
-): OncePerRequestFilter() {
+) : OncePerRequestFilter() {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -30,28 +32,40 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        val authHeader: String? = request.getHeader(AUTH_HEADER)
-        if (authHeader != null && authHeader.startsWith(BEARER_TOKEN_PREFIX)){
-            val jwt = authHeader.substring(BEARER_TOKEN_PREFIX.length).trim()
-            if (SecurityContextHolder.getContext().authentication == null) {
-                try {
-                    val userName: String = jwtService.extractUsername(jwt)
-                    val userDetails: UserDetails = userService.loadUserByUsername(userName)
-                    if(jwtService.isTokenValid(token = jwt, userDetails =  userDetails)) {
-                        val authToken = UsernamePasswordAuthenticationToken(userDetails, null, userDetails.authorities)
-                            .apply { details = WebAuthenticationDetailsSource().buildDetails(request) }
-                        SecurityContextHolder.getContext().authentication = authToken
+        try {
+            val authHeader: String? = request.getHeader(AUTH_HEADER)
+            if (authHeader != null && authHeader.startsWith(BEARER_TOKEN_PREFIX)) {
+                val jwt = authHeader.substring(BEARER_TOKEN_PREFIX.length).trim()
+                if (SecurityContextHolder.getContext().authentication == null) {
+                    try {
+                        val username: String = jwtService.extractUsername(jwt)
+                        val userDetails: UserDetails = userService.loadUserByUsername(username)
+                        if (jwtService.isTokenValid(token = jwt, userDetails = userDetails)) {
+                            val authToken = UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.authorities
+                            ).apply {
+                                details = WebAuthenticationDetailsSource().buildDetails(request)
+                            }
+                            SecurityContextHolder.getContext().authentication = authToken
+
+                            // Put userId in MDC for logging
+                            val userId = (userDetails as? AppUser)?.id?.toString()
+                            if (userId != null) {
+                                MDC.put("userId", userId)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        log.error("Error processing JWT: ${e.message}")
+                        response.status = HttpServletResponse.SC_UNAUTHORIZED
+                        response.writer.write("Invalid JWT token")
+                        return
                     }
-                } catch (e: Exception) {
-                    log.error("Error processing JWT: ${e.message}")
-                    response.status = HttpServletResponse.SC_UNAUTHORIZED
-                    response.writer.write("Invalid JWT token")
-                    return
                 }
-
-
             }
+
+            filterChain.doFilter(request, response)
+        } finally {
+            MDC.remove("userId")
         }
-        filterChain.doFilter(request, response)
     }
 }

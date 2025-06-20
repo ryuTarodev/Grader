@@ -15,15 +15,11 @@ class SubmissionConsumer(
     @RabbitListener(queues = ["\${rabbitmq.queue.result}"])
     fun handleResult(result: SubmissionReceiveMessage) {
         logger.info("✅ Received result from resultQueue: $result")
-        finishSubmission(result.submissionId, result.correctTestCases)
+        finishSubmission(submissionId = result.submissionId, correctTestCases = result.correctTestCases)
     }
 
     fun finishSubmission(submissionId: Long, correctTestCases: Long) {
-        try {
-            submissionService.updateSubmissionResult(submissionId = submissionId, score = correctTestCases.toFloat() * 4)
-            logger.info("✅ Successfully updated submission with ID $submissionId")
-        } catch (e: Exception) {
-            logger.error("❌ Failed to update submission $submissionId", e)
-        }
+        submissionService.updateSubmissionResult(submissionId = submissionId, score = correctTestCases.toFloat() * 4)
+        logger.info("✅ Successfully updated submission with ID $submissionId")
     }
 }

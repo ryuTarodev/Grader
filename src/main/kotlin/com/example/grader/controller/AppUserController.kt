@@ -28,9 +28,9 @@ class AppUserController(
         return ResponseEntity.ok(response)
     }
     @GetMapping("/me")
-    fun getCurrentUser(): ResponseEntity<ApiResponse<ApiResponse<AppUserDto>>> {
+    fun getCurrentUser(): ResponseEntity<ApiResponse<AppUserDto>> {
 
-        val appUser = clientSessionService.getCurrentUserResponse()
+        val appUser = clientSessionService.getCurrentUser()
         val response = ResponseUtil.created("AppUser fetch successfully", appUser, null)
         return ResponseEntity.ok(response)
     }

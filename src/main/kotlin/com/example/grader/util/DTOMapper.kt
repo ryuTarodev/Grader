@@ -7,7 +7,7 @@ import com.example.grader.entity.*
 fun AppUser.toAppUserDTO(): AppUserDto {
     return AppUserDto(
         id = this.id,
-        appUsername = this.appUsername,
+        username = this.appUsername,
         profilePicture = this.profilePicture
     )
 }

@@ -17,20 +17,20 @@ class ProblemService(
     private val problemRepository: ProblemRepository,
     private val s3Service: AwsS3Service
 ) {
-    private val logger = LoggerFactory.getLogger(javaClass)
+    private val logger = LoggerFactory.getLogger(ProblemService::class.java)
 
     fun addNewProblem(problemRequest: ProblemRequest): ProblemDto {
-        // Validate input
+        logger.debug("addNewProblem called with title: '${problemRequest.title}'")
+
         if (problemRequest.title.isBlank() || problemRequest.pdf.isEmpty) {
+            logger.warn("Invalid ProblemRequest: Title or PDF is empty")
             throw BadRequestException("Title and PDF cannot be blank or empty")
         }
 
-        logger.info("Creating new problem with title: ${problemRequest.title}")
-
-        // Upload PDF to S3
+        logger.info("Uploading PDF to S3 for new problem: '${problemRequest.title}'")
         val pdfKey = s3Service.savePdfToS3(problemRequest.pdf)
+        logger.debug("PDF uploaded with S3 key: $pdfKey")
 
-        // Create and save problem
         val problem = Problem(
             title = problemRequest.title,
             difficulty = problemRequest.difficulty,
@@ -38,18 +38,19 @@ class ProblemService(
         )
 
         val savedProblem = problemRepository.save(problem)
-        logger.info("Problem created successfully with ID: ${savedProblem.id}")
+        logger.info("Problem successfully saved with ID: ${savedProblem.id}")
 
         return savedProblem.toProblemDTO()
     }
 
     fun listAllProblems(): List<ProblemDto> {
-        logger.info("Retrieving all problems")
+        logger.debug("listAllProblems called")
 
         val problems = problemRepository.findAll()
+        logger.info("Found ${problems.size} problems in repository")
 
-        // Generate presigned URLs for each problem
         val problemsWithUrls = problems.map { problem ->
+            logger.debug("Generating presigned URL for problem ID: ${problem.id}")
             problem.pdf = s3Service.generatePresignedUrl(problem.pdf)
             problem
         }
@@ -58,55 +59,66 @@ class ProblemService(
     }
 
     fun getProblemById(id: Long): ProblemDto {
-        logger.info("Retrieving problem with ID: $id")
+        logger.debug("getProblemById called with ID: $id")
 
         val problem = problemRepository.findByIdOrNull(id)
-            ?: throw ProblemNotFoundException("Problem not found with ID: $id")
+        if (problem == null) {
+            logger.warn("Problem not found with ID: $id")
+            throw ProblemNotFoundException("Problem not found with ID: $id")
+        }
 
-        // Generate presigned URL for PDF
+        logger.info("Problem found with ID: $id, generating presigned URL")
         problem.pdf = s3Service.generatePresignedUrl(problem.pdf)
 
         return problem.toProblemDTO()
     }
 
     fun updateProblem(id: Long, problemRequest: ProblemRequest): ProblemDto {
-        // Validate input
+        logger.debug("updateProblem called with ID: $id")
+
         if (problemRequest.title.isBlank() || problemRequest.pdf.isEmpty) {
+            logger.warn("Invalid ProblemRequest: Title or PDF is empty")
             throw BadRequestException("Title and PDF cannot be blank or empty")
         }
 
-        logger.info("Updating problem with ID: $id")
-
-        // Find existing problem
         val problem = problemRepository.findByIdOrNull(id)
-            ?: throw ProblemNotFoundException("Problem not found with ID: $id")
+        if (problem == null) {
+            logger.warn("Problem not found with ID: $id")
+            throw ProblemNotFoundException("Problem not found with ID: $id")
+        }
 
-        // Update fields
+        logger.info("Updating problem with ID: $id")
         problem.title = problemRequest.title
         problem.difficulty = problemRequest.difficulty
 
-        // Upload new PDF if provided
+        logger.info("Uploading new PDF to S3 for problem ID: $id")
         val newPdfKey = s3Service.savePdfToS3(problemRequest.pdf)
+        logger.debug("New PDF uploaded with S3 key: $newPdfKey")
+
         problem.pdf = newPdfKey
-
-        // Save and return
         val updatedProblem = problemRepository.save(problem)
-        updatedProblem.pdf = s3Service.generatePresignedUrl(updatedProblem.pdf)
-
         logger.info("Problem updated successfully with ID: $id")
+
+        updatedProblem.pdf = s3Service.generatePresignedUrl(updatedProblem.pdf)
         return updatedProblem.toProblemDTO()
     }
 
     fun deleteProblem(id: Long) {
-        logger.info("Deleting problem with ID: $id")
+        logger.debug("deleteProblem called with ID: $id")
 
         val problem = problemRepository.findByIdOrNull(id)
-            ?: throw ProblemNotFoundException("Problem not found with ID: $id")
+        if (problem == null) {
+            logger.warn("Problem not found with ID: $id")
+            throw ProblemNotFoundException("Problem not found with ID: $id")
+        }
 
-        // Delete from S3 if needed (optional - you might want to keep files for audit)
+        logger.info("Deleting problem with ID: $id from database")
+        problemRepository.delete(problem)
+
+        // Optional S3 cleanup
+        // logger.info("Deleting PDF from S3 with key: ${problem.pdf}")
         // s3Service.deleteFile(problem.pdf)
 
-        problemRepository.delete(problem)
         logger.info("Problem deleted successfully with ID: $id")
     }
 }

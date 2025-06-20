@@ -11,6 +11,6 @@ import java.io.Serializable
  */
 data class AppUserDto(
     val id: Long = 0,
-    val appUsername: String = "",
+    val username: String = "",
     var profilePicture: String = ""
 ) : Serializable

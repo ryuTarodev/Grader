@@ -17,6 +17,7 @@
                     "thread":"%thread",
                     "message": "%message",
                     "requestId": "%X{X-Request-ID}"
+                    "userId": "%X{userId}"
                     }
                 </pattern>
             </message>

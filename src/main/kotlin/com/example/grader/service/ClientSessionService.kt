@@ -18,46 +18,24 @@ class ClientSessionService(private val repository: AppUserRepository) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-
     fun retrieveAuthentication(): Authentication? {
         return SecurityContextHolder.getContext().authentication
     }
 
-    fun getCurrentUserResponse(): ApiResponse<AppUserDto> {
-        return try {
-            val authentication = retrieveAuthentication()
-                ?: throw UserNotFoundException("Authenticated user not found")
+    fun getCurrentUser(): AppUserDto {
+        val authentication = retrieveAuthentication()
+            ?: throw UserNotFoundException("Authenticated user not found")
 
-            val username = when (val principal = authentication.principal) {
-                is UserDetails -> principal.username
-                else -> principal.toString()
-            }
-
-            val user = repository.findAppUserByAppUsername(username)
-                ?: throw UserNotFoundException("User not found with username: $username")
-
-            val dto = user.toAppUserDTO()
-            logger.info("Current authenticated user: $username")
-
-            ResponseUtil.success(
-                message = "Current authenticated user retrieved successfully",
-                data = dto,
-                metadata = null
-            )
-
-        } catch (e: UserNotFoundException) {
-            logger.error("User not found: ${e.message}")
-            ResponseUtil.notFound(
-                message = "User not found",
-                data = AppUserDto()
-            )
-
-        } catch (e: Exception) {
-            logger.error("Unexpected error: ${e.message}")
-            ResponseUtil.internalServerError(
-                message = "An unexpected error occurred: ${e.message}",
-                data = AppUserDto()
-            )
+        val username = when (val principal = authentication.principal) {
+            is UserDetails -> principal.username
+            else -> principal.toString()
         }
+
+        val user = repository.findAppUserByAppUsername(username)
+            ?: throw UserNotFoundException("User not found with username: $username")
+
+        logger.info("Current authenticated user: $username")
+
+        return user.toAppUserDTO()
     }
 }

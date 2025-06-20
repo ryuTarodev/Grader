@@ -37,23 +37,25 @@ class TestCaseService(
 
         val savedTestCase = testCaseRepository.save(testCase)
 
-        logger.info("Created test case with ID: ${savedTestCase.id} for problem ID: $problemId")
+        logger.info("Created TestCase (ID: ${savedTestCase.id}) for Problem (ID: $problemId)")
 
         return savedTestCase.toTestCaseDTO()
     }
 
-
     fun getTestCasesByProblemId(problemId: Long): List<TestCaseDto> {
-        // Verify problem exists first
         findProblemById(problemId)
 
         val testCases = testCaseRepository.findByProblemId(problemId)
+
+        logger.debug("Retrieved ${testCases.size} test cases for Problem (ID: $problemId)")
 
         return mapTestCaseListEntityToTestCaseListDTO(testCases)
     }
 
     fun getTestCaseById(id: Long): TestCaseDto {
         val testCase = findTestCaseById(id)
+
+        logger.debug("Retrieved TestCase (ID: $id)")
 
         return testCase.toTestCaseDTO()
     }
@@ -74,7 +76,7 @@ class TestCaseService(
 
         val savedTestCase = testCaseRepository.save(existingTestCase)
 
-        logger.info("Updated test case with ID: $id")
+        logger.info("Updated TestCase (ID: $id) for Problem (ID: $problemId)")
 
         return savedTestCase.toTestCaseDTO()
     }
@@ -85,32 +87,43 @@ class TestCaseService(
 
         testCaseRepository.delete(testCase)
 
-        logger.info("Deleted test case with ID: $id")
+        logger.info("Deleted TestCase (ID: $id)")
     }
 
     private fun validateTestCaseRequest(request: TestCaseRequest) {
         when {
-            request.input.isBlank() -> throw BadRequestException("Test case input cannot be blank")
-            request.output.isBlank() -> throw BadRequestException("Test case output cannot be blank")
-            request.input.length > MAX_INPUT_LENGTH ->
+            request.input.isBlank() -> {
+                throw BadRequestException("Test case input cannot be blank")
+            }
+
+            request.output.isBlank() -> {
+                throw BadRequestException("Test case output cannot be blank")
+            }
+
+            request.input.length > MAX_INPUT_LENGTH -> {
                 throw BadRequestException("Test case input cannot exceed $MAX_INPUT_LENGTH characters")
-            request.output.length > MAX_OUTPUT_LENGTH ->
+            }
+
+            request.output.length > MAX_OUTPUT_LENGTH -> {
                 throw BadRequestException("Test case output cannot exceed $MAX_OUTPUT_LENGTH characters")
+            }
         }
     }
 
     private fun findProblemById(problemId: Long): Problem {
         return problemRepository.findByIdOrNull(problemId)
             ?: throw ProblemNotFoundException("No Problem found with ID $problemId")
+
     }
 
     private fun findTestCaseById(id: Long): TestCase {
         return testCaseRepository.findByIdOrNull(id)
             ?: throw TestCaseNotFoundException("No TestCase found with ID $id")
+
     }
 
     companion object {
-        private const val MAX_INPUT_LENGTH = 10000 // Adjust as needed
-        private const val MAX_OUTPUT_LENGTH = 10000 // Adjust as needed
+        private const val MAX_INPUT_LENGTH = 10000
+        private const val MAX_OUTPUT_LENGTH = 10000
     }
 }

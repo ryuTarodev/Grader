@@ -1,13 +1,14 @@
 package com.example.grader.error
 
 import org.slf4j.LoggerFactory
+import org.springframework.amqp.AmqpException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
-import org.springframework.validation.FieldError
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -33,7 +34,7 @@ class GlobalExceptionHandler {
         ProblemTagNotFoundException::class
     )
     fun handleNotFoundException(exception: RuntimeException): ResponseEntity<ApiError> {
-        logger.warn("Resource not found: ${exception.message}")
+        logger.warn("[${exception::class.simpleName}] ${exception.message}")
         return buildResponseEntity(HttpStatus.NOT_FOUND, exception.message)
     }
 
@@ -44,7 +45,7 @@ class GlobalExceptionHandler {
         IllegalArgumentException::class
     )
     fun handleBadRequestException(exception: RuntimeException): ResponseEntity<ApiError> {
-        logger.warn("Bad request: ${exception.message}")
+        logger.warn("[${exception::class.simpleName}] ${exception.message}")
         return buildResponseEntity(HttpStatus.BAD_REQUEST, exception.message)
     }
 
@@ -57,7 +58,7 @@ class GlobalExceptionHandler {
         UnauthorizedException::class
     )
     fun handleUnauthorizedException(exception: RuntimeException): ResponseEntity<ApiError> {
-        logger.warn("Unauthorized access: ${exception.message}")
+        logger.warn("[${exception::class.simpleName}] ${exception.message}")
         return buildResponseEntity(HttpStatus.UNAUTHORIZED, exception.message)
     }
 
@@ -70,24 +71,25 @@ class GlobalExceptionHandler {
         DuplicateException::class
     )
     fun handleConflictException(exception: RuntimeException): ResponseEntity<ApiError> {
-        logger.warn("Conflict error: ${exception.message}")
+        logger.warn("[${exception::class.simpleName}] ${exception.message}")
         return buildResponseEntity(HttpStatus.CONFLICT, exception.message)
     }
 
     // Internal Server Error (500)
     @ExceptionHandler(
         JwtKeyException::class,
-        SubmissionSendException::class
+        SubmissionSendException::class,
+        AmqpException::class,
     )
     fun handleInternalServerException(exception: RuntimeException): ResponseEntity<ApiError> {
-        logger.error("Internal server error: ${exception.message}", exception)
+        logger.error("[${exception::class.simpleName}] ${exception.message}", exception)
         return buildResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error occurred")
     }
 
     // Validation Errors (400)
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<ApiError> {
-        logger.warn("Validation error: ${ex.message}")
+        logger.warn("[MethodArgumentNotValidException] ${ex.message}")
 
         val errors = ex.bindingResult.fieldErrors.joinToString(", ") { error: FieldError ->
             "${error.field}: ${error.defaultMessage}"
@@ -99,7 +101,7 @@ class GlobalExceptionHandler {
     // Generic Exception Handler (500)
     @ExceptionHandler(Exception::class)
     fun handleGenericException(exception: Exception): ResponseEntity<ApiError> {
-        logger.error("Unexpected error occurred", exception)
+        logger.error("[UnexpectedException] ${exception.message}", exception)
         return buildResponseEntity(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "An unexpected error occurred",

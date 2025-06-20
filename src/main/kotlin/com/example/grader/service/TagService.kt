@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional
 class TagService(
     private val tagRepository: TagRepository,
 ) {
+    companion object {
+        private const val MAX_TAG_NAME_LENGTH = 50
+    }
+
     private val logger = LoggerFactory.getLogger(javaClass)
 
     fun createTag(tagName: String): TagDto {
@@ -28,22 +32,20 @@ class TagService(
         val newTag = Tag(name = tagName.trim())
         val savedTag = tagRepository.save(newTag)
 
-        logger.info("Created new tag with ID: ${savedTag.id}")
+        logger.info("Created new tag: id={}, name={}", savedTag.id, savedTag.name)
 
         return savedTag.toTagDTO()
     }
 
-
     fun getTags(): List<TagDto> {
         val tags = tagRepository.findAll()
-
+        logger.info("Retrieved {} tags", tags.size)
         return mapTagListEntityToTagListDTO(tags)
     }
 
-
     fun getTagById(id: Long): TagDto {
         val tag = findTagById(id)
-
+        logger.info("Retrieved tag by id: id={}, name={}", tag.id, tag.name)
         return tag.toTagDTO()
     }
 
@@ -53,7 +55,6 @@ class TagService(
         val existingTag = findTagById(id)
         val trimmedName = tagName.trim()
 
-        // Check if another tag with the same name exists (excluding current tag)
         if (tagRepository.existsByNameAndIdNot(trimmedName, id)) {
             throw BadRequestException("Tag with name [$trimmedName] already exists")
         }
@@ -61,7 +62,7 @@ class TagService(
         existingTag.name = trimmedName
         val updatedTag = tagRepository.save(existingTag)
 
-        logger.info("Updated tag with ID: $id")
+        logger.info("Updated tag: id={}, newName={}", updatedTag.id, updatedTag.name)
 
         return updatedTag.toTagDTO()
     }
@@ -69,10 +70,8 @@ class TagService(
     @Transactional
     fun deleteTagById(id: Long) {
         val tag = findTagById(id)
-
         tagRepository.delete(tag)
-
-        logger.info("Deleted tag with ID: $id")
+        logger.info("Deleted tag: id={}, name={}", tag.id, tag.name)
     }
 
     private fun validateTagName(tagName: String) {
@@ -90,7 +89,5 @@ class TagService(
             ?: throw TagNotFoundException("Tag with ID $id not found")
     }
 
-    companion object {
-        private const val MAX_TAG_NAME_LENGTH = 50 // Adjust as needed
-    }
+
 }

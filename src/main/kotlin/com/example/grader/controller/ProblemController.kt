@@ -2,14 +2,12 @@ package com.example.grader.controller
 
 import com.example.grader.dto.ApiResponse
 import com.example.grader.dto.ProblemDto
-import com.example.grader.dto.RequestResponse.ProblemRequest
+import com.example.grader.entity.Difficulty
 import com.example.grader.service.ProblemService
 import com.example.grader.util.ResponseUtil
-import jakarta.validation.Valid
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-
+import org.springframework.web.multipart.MultipartFile
 
 @RestController
 @RequestMapping("/api/problems")
@@ -17,11 +15,20 @@ class ProblemController(
     private val problemService: ProblemService
 ) {
 
-    @PostMapping
-    fun createProblem(@Valid @RequestBody problemRequest: ProblemRequest): ResponseEntity<ApiResponse<ProblemDto>> {
-        val problemDto = problemService.addNewProblem(problemRequest)
-        val response = ResponseUtil.created("Problem created successfully", problemDto, null)
-        return ResponseEntity.status(HttpStatus.CREATED).body(response)
+    @PostMapping("")
+    fun createProblem(
+        @RequestPart("title") title: String,
+        @RequestPart("difficulty") difficulty: String,
+        @RequestPart("pdf") pdf: MultipartFile
+    ): ResponseEntity<ApiResponse<ProblemDto>> {
+        val result = problemService.addNewProblem(
+            title = title,
+            difficulty = Difficulty.valueOf(difficulty.uppercase()),
+            pdf = pdf
+        )
+        val response = ResponseUtil.created("Problem created successfully", result, null)
+
+        return ResponseEntity.status(201).body(response)
     }
 
     @GetMapping
@@ -41,9 +48,16 @@ class ProblemController(
     @PutMapping("/{id}")
     fun updateProblem(
         @PathVariable id: Long,
-        @Valid @RequestBody problemRequest: ProblemRequest
+        @RequestPart("title") title: String,
+        @RequestPart("difficulty") difficulty: String,
+        @RequestPart("pdf") pdf: MultipartFile
     ): ResponseEntity<ApiResponse<ProblemDto>> {
-        val updatedProblem = problemService.updateProblem(id, problemRequest)
+        val updatedProblem = problemService.updateProblem(
+            id,
+            title,
+            Difficulty.valueOf(difficulty.uppercase()),
+            pdf
+        )
         val response = ResponseUtil.success("Problem updated successfully", updatedProblem, null)
         return ResponseEntity.ok(response)
     }

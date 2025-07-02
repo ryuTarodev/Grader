@@ -3,17 +3,15 @@ package com.example.grader.service
 import com.example.grader.dto.*
 import com.example.grader.dto.RequestResponse.*
 import com.example.grader.entity.AppUser
-import com.example.grader.error.BadRequestException
-import com.example.grader.error.UserNotFoundException
-import com.example.grader.error.DuplicateException
-import com.example.grader.error.UnauthorizedException
+import com.example.grader.error.*
 import com.example.grader.repository.AppUserRepository
 import com.example.grader.security.JwtService
-import com.example.grader.util.mapUserListEntityToUserListDTO
 import com.example.grader.util.toAppUserDTO
 import org.slf4j.LoggerFactory
 import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
@@ -23,7 +21,6 @@ import java.time.Instant
 class AppUserService(
     private val appUserRepository: AppUserRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val clientSessionService: ClientSessionService,
     private val authenticationManager: AuthenticationManager,
     private val jwtService: JwtService,
     private val s3Service: AwsS3Service
@@ -31,7 +28,7 @@ class AppUserService(
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun signUp(appUserRequest: AppUserRequest): AppUserResponse {
+    fun signUp(appUserRequest: AppUserRequest): InternalAppUserResponse {
         logger.info("Attempting to sign up user: ${appUserRequest.username}")
 
         if (appUserRepository.existsAppUserByAppUsername(appUserRequest.username)) {
@@ -56,17 +53,64 @@ class AppUserService(
         logger.info("User saved successfully: ${savedAppUser.appUsername}")
 
         val accessToken = jwtService.generateAccessToken(savedAppUser)
-        logger.info("JWT token generated for user: ${savedAppUser.appUsername}")
+        val refreshToken = jwtService.generateRefreshToken(savedAppUser)
+        logger.info("Tokens generated for user: ${savedAppUser.appUsername}")
 
         val appUserDto = savedAppUser.toAppUserDTO()
         if (appUserDto.profilePicture.isNotEmpty()) {
             appUserDto.profilePicture = s3Service.generatePresignedUrl(appUserDto.profilePicture)
-            logger.info("Presigned URL generated for profile picture of user: ${appUserDto.username}")
         }
 
-        return AppUserResponse(appUser = appUserDto, token = accessToken)
+        return InternalAppUserResponse(appUser = appUserDto, accessToken = accessToken, refreshToken = refreshToken)
     }
 
+    fun signIn(loginRequest: LoginRequest): InternalAppUserResponse {
+        logger.info("User attempting to sign in: ${loginRequest.username}")
+
+        try {
+            authenticationManager.authenticate(
+                UsernamePasswordAuthenticationToken(loginRequest.username, loginRequest.password)
+            )
+        } catch (e: Exception) {
+            logger.error("Sign in failed: ${e.message}")
+            throw BadCredentialsException("Invalid username or password")
+        }
+
+        val savedAppUser = appUserRepository.findAppUserByAppUsername(loginRequest.username)
+            ?: throw UserNotFoundException("User not found with username: ${loginRequest.username}")
+
+        val accessToken = jwtService.generateAccessToken(savedAppUser)
+        val refreshToken = jwtService.generateRefreshToken(savedAppUser)
+        logger.info("Tokens generated for user: ${savedAppUser.appUsername}")
+
+        val appUserDto = savedAppUser.toAppUserDTO()
+        if (appUserDto.profilePicture.isNotEmpty()) {
+            appUserDto.profilePicture = s3Service.generatePresignedUrl(appUserDto.profilePicture)
+        }
+
+        return InternalAppUserResponse(appUser = appUserDto, accessToken = accessToken, refreshToken = refreshToken)
+    }
+
+
+    fun refreshToken(refreshToken: String): InternalAppUserResponse {
+        logger.info("Refreshing token: $refreshToken")
+
+        if (!jwtService.isTokenValid(refreshToken)) {
+            throw TokenExpiredException("Token is expired")
+        }
+
+        val username = jwtService.extractUsername(refreshToken)
+        val appUser = appUserRepository.findAppUserByAppUsername(username)
+            ?: throw UserNotFoundException("User not found with username: $username")
+
+        val newAccessToken = jwtService.generateAccessToken(appUser)
+
+        return InternalAppUserResponse(
+            appUser = appUser.toAppUserDTO(),
+            accessToken = newAccessToken,
+            refreshToken = refreshToken // reusing old refresh token
+        )
+    }
     fun resetPassword(resetPasswordRequest: ResetPasswordRequest): AppUserDto {
         logger.info("Password reset attempt for user: ${resetPasswordRequest.username}")
 
@@ -100,30 +144,6 @@ class AppUserService(
         return savedAppUser.toAppUserDTO()
     }
 
-    fun signIn(loginRequest: LoginRequest): AppUserResponse {
-        logger.info("User attempting to sign in: ${loginRequest.username}")
-
-        authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken(
-                loginRequest.username,
-                loginRequest.password
-            )
-        )
-
-        val savedAppUser = appUserRepository.findAppUserByAppUsername(loginRequest.username)
-            ?: throw UserNotFoundException("User not found with username: ${loginRequest.username}")
-
-        val accessToken = jwtService.generateAccessToken(savedAppUser)
-        logger.info("Login successful for user: ${savedAppUser.appUsername}")
-
-        val appUserDto = savedAppUser.toAppUserDTO()
-        if (appUserDto.profilePicture.isNotEmpty()) {
-            appUserDto.profilePicture = s3Service.generatePresignedUrl(appUserDto.profilePicture)
-            logger.info("Presigned URL generated for profile picture of user: ${appUserDto.username}")
-        }
-
-        return AppUserResponse(appUser = appUserDto, token = accessToken)
-    }
 
     fun getAppUsers(): List<AppUserDto> {
         logger.info("Fetching all app users")

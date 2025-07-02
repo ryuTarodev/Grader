@@ -18,7 +18,7 @@ import java.time.Instant
 @Table(name = "app_users")
 data class AppUser(
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "app_user_id_seq")
     @SequenceGenerator(name = "app_user_id_seq", sequenceName = "app_user_id_seq", allocationSize = 1)
     val id: Long = 0,
 
@@ -30,7 +30,7 @@ data class AppUser(
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var role: Role = Role.ROLE_USER,
+    var role: Role = Role.USER,
 
     @Column(nullable = false)
     var profilePicture: String = "",
@@ -43,8 +43,8 @@ data class AppUser(
 
 
     ): UserDetails {
-    override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
-        return mutableListOf(SimpleGrantedAuthority(role.name))
+    override fun getAuthorities(): Collection<GrantedAuthority> {
+        return listOf(SimpleGrantedAuthority("ROLE_${role.name}"))
     }
 
 

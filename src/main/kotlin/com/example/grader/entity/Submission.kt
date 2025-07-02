@@ -1,23 +1,15 @@
 package com.example.grader.entity
 
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
-import jakarta.persistence.Table
+import jakarta.persistence.*
 import java.time.Instant
 
 @Entity
 @Table(name = "submissions")
 data class Submission(
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    val id: Long? = null,
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "submission_id_seq")
+    @SequenceGenerator(name = "submission_id_seq", sequenceName = "submission_id_seq", allocationSize = 1)
+    val id: Long? = 0,
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

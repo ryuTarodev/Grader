@@ -30,6 +30,13 @@ spring:
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  cache:
+    type: redis
+
 jwt:
   secretKey: ${JWT_SECRETKEY}
 
@@ -47,3 +54,4 @@ logging:
     org:
       springframework:
         security: DEBUG
+

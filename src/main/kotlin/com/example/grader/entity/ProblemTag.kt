@@ -7,8 +7,10 @@ import java.time.Instant
 @Table(name = "problem_tags")
 data class ProblemTag(
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    var id: Long? = null,
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "problem_tag_id_seq")
+    @SequenceGenerator(name = "problem_tag_id_seq", sequenceName = "problem_tag_id_seq", allocationSize = 1)
+    var id: Long? = 0,
+
 
     @ManyToOne
     @JoinColumn(name = "problem_id", nullable = false)

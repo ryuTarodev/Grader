@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import javax.naming.AuthenticationException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -42,7 +43,8 @@ class GlobalExceptionHandler {
     @ExceptionHandler(
         BadRequestException::class,
         AwsS3Exception::class,
-        IllegalArgumentException::class
+        IllegalArgumentException::class,
+
     )
     fun handleBadRequestException(exception: RuntimeException): ResponseEntity<ApiError> {
         logger.warn("[${exception::class.simpleName}] ${exception.message}")
@@ -55,7 +57,7 @@ class GlobalExceptionHandler {
         TokenExpiredException::class,
         JwtAuthenticationException::class,
         BadCredentialsException::class,
-        UnauthorizedException::class
+        UnauthorizedException::class,
     )
     fun handleUnauthorizedException(exception: RuntimeException): ResponseEntity<ApiError> {
         logger.warn("[${exception::class.simpleName}] ${exception.message}")

@@ -16,7 +16,7 @@
                     "class":"%logger{36}",
                     "thread":"%thread",
                     "message": "%message",
-                    "requestId": "%X{X-Request-ID}"
+                    "requestId": "%X{correlationId}",
                     "userId": "%X{userId}"
                     }
                 </pattern>

@@ -1,6 +1,5 @@
 package com.example.grader.service
 
-import com.example.grader.dto.RequestResponse.ProblemRequest
 import com.example.grader.entity.Difficulty
 import com.example.grader.entity.Problem
 import com.example.grader.error.BadRequestException
